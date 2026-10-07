@@ -1,0 +1,86 @@
+# ============================================================
+# Charisma 2026 — Keep-Alive
+#
+# Task 6: pings the deployed site on a schedule so an idle
+# deployment is never put to sleep for inactivity.
+#
+# SETUP (one time)
+#   1. Push this repository to GitHub.
+#   2. Repo → Settings → Secrets and variables → Actions → Variables
+#      → New repository variable
+#        Name : SITE_URL
+#        Value: https://your-live-site-url
+#   3. Actions tab → enable workflows.
+#
+# Runs every 10 minutes. GitHub may delay scheduled runs under
+# load, which is fine for a keep-alive.
+#
+# NOTE: GitHub disables scheduled workflows after ~60 days of
+# repository inactivity, and cron cannot run more often than every
+# 5 minutes. For stricter uptime use an external monitor
+# (UptimeRobot, cron-job.org, Cloudflare Cron Triggers).
+# ============================================================
+
+name: Keep-alive ping
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: keepalive
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    name: Ping the live site
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Validate configuration
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+        run: |
+          if [ -z "$SITE_URL" ]; then
+            echo "::error::Repository variable SITE_URL is not set. Add it under Settings → Secrets and variables → Actions → Variables."
+            exit 1
+          fi
+          echo "Target: $SITE_URL"
+
+      - name: Ping homepage
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+        run: |
+          # --max-time keeps a hung request from stalling the job.
+          # -L follows redirects; -s silences the progress meter.
+          CODE=$(curl -s -o /dev/null -w '%{http_code}' -L --max-time 30 "$SITE_URL")
+          echo "Homepage responded with HTTP $CODE"
+          if [ "$CODE" -ge 400 ]; then
+            echo "::warning::Homepage returned HTTP $CODE"
+          fi
+
+      - name: Ping admin dashboard route
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+        run: |
+          BASE="${SITE_URL%/}"
+          CODE=$(curl -s -o /dev/null -w '%{http_code}' -L --max-time 30 "$BASE/admin.html")
+          echo "admin.html responded with HTTP $CODE"
+
+      - name: Summary
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+        run: |
+          {
+            echo "### Keep-alive ping"
+            echo ""
+            echo "- **Target:** $SITE_URL"
+            echo "- **Time (UTC):** $(date -u '+%Y-%m-%d %H:%M:%S')"
+            echo ""
+            echo "The site was pinged to prevent inactivity sleep."
+          } >> "$GITHUB_STEP_SUMMARY"

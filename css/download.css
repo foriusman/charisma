@@ -1,0 +1,116 @@
+/* ============================================================
+   Charisma 2026 — Codebase download page styles (Task 2)
+   Shares brand tokens from css/style.css.
+   ============================================================ */
+
+.dl-body { background: var(--bg-alt); }
+
+.dl-hero {
+  background: var(--gradient-brand); color: var(--cream);
+  padding: clamp(2.6rem, 7vw, 4.2rem) 0 clamp(2.2rem, 6vw, 3.4rem);
+  text-align: center;
+}
+.dl-hero .kicker { color: var(--taupe); }
+.dl-hero .kicker::before, .dl-hero .kicker::after { background: rgba(255,248,173,0.4); }
+.dl-title { color: var(--cream); font-size: clamp(1.7rem, 5vw, 2.7rem); margin-bottom: 0.6rem; }
+.dl-lead { color: var(--taupe-soft); max-width: 62ch; margin: 0 auto; font-size: 0.97rem; }
+
+.dl-main {
+  padding: clamp(1.6rem, 5vw, 3rem) 0 clamp(2.4rem, 6vw, 3.6rem);
+  display: grid; gap: clamp(1rem, 2.5vw, 1.5rem);
+}
+
+.dl-panel {
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-lg);
+  padding: clamp(1.3rem, 4vw, 2.1rem); box-shadow: var(--shadow-sm); min-width: 0;
+}
+.dl-panel-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.7rem; margin-bottom: 1.1rem; }
+.dl-panel-title { font-size: 1.05rem; display: flex; align-items: center; gap: 0.6rem; margin: 0; }
+.dl-panel-title i { color: var(--brown-soft); }
+.dl-count {
+  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--brown); background: rgba(186,170,135,0.26);
+  border-radius: var(--radius-pill); padding: 0.28rem 0.8rem;
+}
+
+/* ---------------- Primary action ---------------- */
+.dl-action { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
+.dl-action-icon {
+  width: 58px; height: 58px; border-radius: 16px; display: grid; place-items: center;
+  background: rgba(186,170,135,0.26); color: var(--brown); font-size: 1.35rem; flex: 0 0 auto;
+}
+.dl-action-title { font-size: clamp(1.05rem, 3vw, 1.35rem); margin: 0 0 0.15rem; overflow-wrap: anywhere; }
+.dl-action-meta { font-size: 0.82rem; color: var(--ink-mute); margin: 0; }
+
+.btn-lg { padding: 1.05rem 2.1rem; font-size: 1rem; }
+.dl-panel .btn-lg { width: 100%; }
+
+.dl-progress { margin-top: 1.3rem; }
+.dl-bar { height: 8px; background: var(--bg-alt); border-radius: var(--radius-pill); overflow: hidden; }
+.dl-bar-fill { display: block; height: 100%; width: 0; background: var(--gradient-brand); border-radius: var(--radius-pill); transition: width 0.3s var(--ease); }
+.dl-progress-text { font-size: 0.8rem; color: var(--ink-mute); margin: 0.6rem 0 0; }
+
+.dl-status { margin: 1rem 0 0; font-size: 0.87rem; min-height: 1.2em; }
+.dl-status.is-ok { color: #2f6b3f; }
+.dl-status.is-err { color: #b3261e; }
+
+/* ---------------- File list ---------------- */
+.file-list { display: grid; gap: 0.55rem; }
+.file-row {
+  display: flex; align-items: center; gap: 0.85rem;
+  background: var(--bg); border: 1px solid var(--line);
+  border-radius: var(--radius-sm); padding: 0.7rem 0.85rem;
+}
+.file-icon {
+  width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center;
+  background: rgba(186,170,135,0.24); color: var(--brown); font-size: 0.85rem; flex: 0 0 auto;
+}
+.file-info { flex: 1; min-width: 0; }
+.file-path { display: block; font-size: 0.85rem; font-weight: 600; overflow-wrap: anywhere; }
+.file-label { display: block; font-size: 0.75rem; color: var(--ink-mute); overflow-wrap: anywhere; }
+.file-dl {
+  width: 36px; height: 36px; border-radius: 10px; flex: 0 0 auto;
+  border: 1px solid var(--line-strong); background: var(--card); color: var(--brown);
+  display: grid; place-items: center; transition: all 0.25s var(--ease);
+}
+.file-dl:hover { background: var(--brown); color: var(--cream); border-color: var(--brown); }
+
+.dl-empty { color: var(--ink-mute); font-size: 0.88rem; text-align: center; padding: 1.6rem 0; }
+.dl-missing {
+  margin-top: 0.4rem; font-size: 0.8rem; color: #96631c;
+  background: rgba(200,137,47,0.1); border: 1px solid rgba(200,137,47,0.28);
+  border-radius: var(--radius-sm); padding: 0.7rem 0.9rem;
+  display: flex; gap: 0.5rem; align-items: flex-start;
+}
+.dl-hint {
+  margin: 1.1rem 0 0; font-size: 0.79rem; color: var(--ink-mute);
+  display: flex; gap: 0.5rem; align-items: flex-start;
+}
+.dl-hint i { margin-top: 0.25rem; color: var(--brown-soft); flex: 0 0 auto; }
+
+/* ---------------- Notes ---------------- */
+.dl-notes { display: grid; gap: 0.7rem; }
+.dl-notes li {
+  font-size: 0.88rem; color: var(--ink-soft);
+  padding-left: 1.1rem; position: relative;
+}
+.dl-notes li::before {
+  content: ""; position: absolute; left: 0; top: 0.62em;
+  width: 6px; height: 6px; border-radius: 50%; background: var(--taupe);
+}
+.dl-notes code { background: var(--bg-alt); padding: 0.08rem 0.35rem; border-radius: 4px; font-size: 0.92em; }
+
+.dl-back { text-align: center; margin: 0.4rem 0 0; }
+.dl-back a { font-size: 0.88rem; display: inline-flex; align-items: center; gap: 0.5rem; }
+.dl-back a:hover { text-decoration: underline; }
+
+@media (max-width: 640px) {
+  .dl-action { gap: 0.8rem; }
+  .dl-action-icon { width: 48px; height: 48px; font-size: 1.1rem; }
+  .dl-panel { border-radius: var(--radius); }
+  .file-row { padding: 0.65rem 0.7rem; }
+}
+
+@media print {
+  .dl-panel .btn-lg, .dl-progress, .file-dl { display: none !important; }
+}

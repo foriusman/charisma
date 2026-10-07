@@ -1,0 +1,188 @@
+[
+  {
+    "name": "love_story",
+    "fields": [
+      {
+        "name": "id",
+        "type": "text"
+      },
+      {
+        "name": "chapter",
+        "type": "text"
+      },
+      {
+        "name": "date_label",
+        "type": "text"
+      },
+      {
+        "name": "title",
+        "type": "text"
+      },
+      {
+        "name": "story",
+        "type": "rich_text"
+      },
+      {
+        "name": "icon",
+        "type": "text"
+      },
+      {
+        "name": "sort_order",
+        "type": "number"
+      }
+    ]
+  },
+  {
+    "name": "gallery",
+    "fields": [
+      {
+        "name": "id",
+        "type": "text"
+      },
+      {
+        "name": "caption",
+        "type": "text"
+      },
+      {
+        "name": "image_url",
+        "type": "text"
+      },
+      {
+        "name": "tag",
+        "type": "text"
+      },
+      {
+        "name": "sort_order",
+        "type": "number"
+      }
+    ]
+  },
+  {
+    "name": "gifts",
+    "fields": [
+      {
+        "name": "id",
+        "type": "text"
+      },
+      {
+        "name": "group_name",
+        "type": "text",
+        "options": [
+          "Donation",
+          "Gifting"
+        ]
+      },
+      {
+        "name": "title",
+        "type": "text"
+      },
+      {
+        "name": "description",
+        "type": "rich_text"
+      },
+      {
+        "name": "meta_label",
+        "type": "text"
+      },
+      {
+        "name": "icon",
+        "type": "text"
+      },
+      {
+        "name": "sort_order",
+        "type": "number"
+      }
+    ]
+  },
+  {
+    "name": "prayers",
+    "fields": [
+      {
+        "name": "id",
+        "type": "text"
+      },
+      {
+        "name": "guest_name",
+        "type": "text"
+      },
+      {
+        "name": "relation",
+        "type": "text"
+      },
+      {
+        "name": "message",
+        "type": "rich_text"
+      },
+      {
+        "name": "submitted_at",
+        "type": "datetime"
+      },
+      {
+        "name": "approved",
+        "type": "bool"
+      }
+    ]
+  },
+  {
+    "name": "payments",
+    "fields": [
+      {
+        "name": "id",
+        "type": "text"
+      },
+      {
+        "name": "reference",
+        "type": "text"
+      },
+      {
+        "name": "payer_name",
+        "type": "text"
+      },
+      {
+        "name": "payer_email",
+        "type": "text"
+      },
+      {
+        "name": "amount",
+        "type": "number"
+      },
+      {
+        "name": "currency",
+        "type": "text"
+      },
+      {
+        "name": "purpose",
+        "type": "text"
+      },
+      {
+        "name": "note",
+        "type": "rich_text"
+      },
+      {
+        "name": "status",
+        "type": "text",
+        "options": [
+          "pending",
+          "confirmed",
+          "failed"
+        ]
+      },
+      {
+        "name": "gateway",
+        "type": "text"
+      },
+      {
+        "name": "gateway_reference",
+        "type": "text"
+      },
+      {
+        "name": "paid_at",
+        "type": "datetime"
+      },
+      {
+        "name": "created_at",
+        "type": "datetime"
+      }
+    ]
+  }
+]
