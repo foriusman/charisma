@@ -1,5 +1,3 @@
-# charisma
-Wedding landing page
 # The Charisma Wedding — Usman Fori &amp; Charity Ishaku
 
 A modern, responsive wedding landing page for **Usman Fori (Coffee)** &amp; **Charity Ishaku (Vanilla)** —

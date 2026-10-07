@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gift Dashboard — The Charisma Wedding</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="Internal dashboard for tracking monetary gifts received through Zainpay for the Charisma 2026 wedding.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23703104'/%3E%3Ctext x='32' y='44' font-family='Georgia,serif' font-size='34' fill='%23FFF8AD' text-anchor='middle'%3EC%26U%3C/text%3E%3C/svg%3E">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700&family=Great+Vibes&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body class="admin-body">
+
+<!-- ============ SIGN-IN (client-side gate) ============ -->
+<section class="admin-gate" id="admin-gate">
+  <div class="gate-card">
+    <p class="gate-monogram" aria-hidden="true">C<span>&amp;</span>U</p>
+    <h1 class="gate-title">Gift Dashboard</h1>
+    <p class="gate-sub">The Charisma Wedding &middot; #Charisma2026</p>
+
+    <form id="gate-form" novalidate>
+      <div class="field">
+        <label for="gate-pass">Dashboard passcode</label>
+        <input type="password" id="gate-pass" name="passcode" autocomplete="current-password"
+               placeholder="Enter passcode" required>
+      </div>
+      <button class="btn btn-solid btn-block" type="submit" id="gate-submit">
+        <i class="fa-solid fa-unlock" aria-hidden="true"></i> Unlock Dashboard
+      </button>
+      <p class="form-status" id="gate-status" role="status" aria-live="polite"></p>
+    </form>
+
+    <p class="gate-warning">
+      <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+      This is a <strong>convenience lock, not real security</strong>. Any passcode in a
+      static page can be read in the page source. Keep a private treasury figure or
+      account details out of this page and restrict the hosted route instead.
+    </p>
+  </div>
+</section>
+
+<!-- ============ DASHBOARD ============ -->
+<div class="admin-shell" id="admin-shell" hidden>
+
+  <header class="admin-topbar">
+    <div class="admin-brand">
+      <span class="admin-brand-mark" aria-hidden="true">C<span>&amp;</span>U</span>
+      <span>
+        <strong>Gift Dashboard</strong>
+        <small id="store-label">Store: checking…</small>
+      </span>
+    </div>
+
+    <div class="admin-actions">
+      <button class="btn btn-outline btn-sm" type="button" id="refresh-btn">
+        <i class="fa-solid fa-rotate" aria-hidden="true"></i> Refresh
+      </button>
+      <button class="btn btn-outline btn-sm" type="button" id="csv-btn">
+        <i class="fa-solid fa-file-csv" aria-hidden="true"></i> Export CSV
+      </button>
+      <a class="btn btn-outline btn-sm" href="index.html">
+        <i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Site
+      </a>
+      <button class="btn btn-outline btn-sm" type="button" id="lock-btn">
+        <i class="fa-solid fa-lock" aria-hidden="true"></i> Lock
+      </button>
+    </div>
+  </header>
+
+  <main class="admin-main">
+
+    <!-- KPI cards -->
+    <section class="admin-kpis" aria-label="Payment summary">
+      <article class="kpi">
+        <span class="kpi-icon" aria-hidden="true"><i class="fa-solid fa-sack-dollar"></i></span>
+        <p class="kpi-label">Total received</p>
+        <p class="kpi-value" id="kpi-total">—</p>
+        <p class="kpi-foot" id="kpi-total-foot">&nbsp;</p>
+      </article>
+
+      <article class="kpi">
+        <span class="kpi-icon" aria-hidden="true"><i class="fa-solid fa-circle-check"></i></span>
+        <p class="kpi-label">Confirmed gifts</p>
+        <p class="kpi-value" id="kpi-confirmed">—</p>
+        <p class="kpi-foot" id="kpi-confirmed-foot">&nbsp;</p>
+      </article>
+
+      <article class="kpi">
+        <span class="kpi-icon" aria-hidden="true"><i class="fa-solid fa-hourglass-half"></i></span>
+        <p class="kpi-label">Pending</p>
+        <p class="kpi-value" id="kpi-pending">—</p>
+        <p class="kpi-foot" id="kpi-pending-foot">&nbsp;</p>
+      </article>
+
+      <article class="kpi">
+        <span class="kpi-icon" aria-hidden="true"><i class="fa-solid fa-chart-simple"></i></span>
+        <p class="kpi-label">Average gift</p>
+        <p class="kpi-value" id="kpi-average">—</p>
+        <p class="kpi-foot" id="kpi-average-foot">&nbsp;</p>
+      </article>
+    </section>
+
+    <!-- Breakdown -->
+    <section class="admin-panels">
+      <article class="panel">
+        <h2 class="panel-title"><i class="fa-solid fa-chart-pie" aria-hidden="true"></i> By purpose</h2>
+        <div class="bar-chart" id="chart-purpose" role="img" aria-label="Gifts grouped by purpose">
+          <p class="admin-empty">Loading…</p>
+        </div>
+      </article>
+
+      <article class="panel">
+        <h2 class="panel-title"><i class="fa-solid fa-coins" aria-hidden="true"></i> Recent activity</h2>
+        <ul class="activity" id="activity-list">
+          <li class="admin-empty">Loading…</li>
+        </ul>
+      </article>
+    </section>
+
+    <!-- Transactions -->
+    <section class="panel panel--wide">
+      <div class="panel-head">
+        <h2 class="panel-title"><i class="fa-solid fa-receipt" aria-hidden="true"></i> Payment records</h2>
+
+        <div class="panel-tools">
+          <label class="sr-only" for="pay-search">Search payments</label>
+          <input type="search" id="pay-search" placeholder="Search name, email, reference…">
+
+          <label class="sr-only" for="pay-filter">Filter by status</label>
+          <select id="pay-filter">
+            <option value="all">All statuses</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="pending">Pending</option>
+            <option value="failed">Failed</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="table-scroll">
+        <table class="pay-table">
+          <caption class="sr-only">Monetary gifts recorded through Zainpay</caption>
+          <thead>
+            <tr>
+              <th scope="col">Reference</th>
+              <th scope="col">Payer</th>
+              <th scope="col">Purpose</th>
+              <th scope="col" class="num">Amount</th>
+              <th scope="col">Status</th>
+              <th scope="col">Date</th>
+              <th scope="col">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="pay-rows">
+            <tr><td colspan="7" class="admin-empty">Loading records…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="admin-note" id="store-note"></p>
+    </section>
+
+  </main>
+
+  <footer class="admin-footer">
+    <p>Charisma 2026 &middot; Usman Fori &amp; Charity Ishaku &middot; Internal use only.</p>
+  </footer>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/admin.js"></script>
+<script src="https://www.genspark.ai/sandbox_inspect.js"></script></body>
+</html>

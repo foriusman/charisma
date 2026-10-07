@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Download the Codebase — The Charisma Wedding</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="Package and download the complete Charisma 2026 wedding website codebase as a zip archive.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23703104'/%3E%3Ctext x='32' y='44' font-family='Georgia,serif' font-size='34' fill='%23FFF8AD' text-anchor='middle'%3EC%26U%3C/text%3E%3C/svg%3E">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700&family=Great+Vibes&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/download.css">
+</head>
+<body class="dl-body">
+
+<section class="dl-hero">
+  <div class="wrap">
+    <p class="kicker">Codebase Export</p>
+    <h1 class="dl-title">Download the Full Codebase</h1>
+    <p class="dl-lead">
+      Everything that makes up this website &mdash; pages, styles, scripts, the database
+      schema, the keep-alive workflow and the brand assets &mdash; packaged into a single
+      zip archive you can keep, back up or re-deploy.
+    </p>
+  </div>
+</section>
+
+<main class="wrap dl-main">
+
+  <section class="dl-panel" aria-labelledby="dl-action-title">
+    <div class="dl-action">
+      <span class="dl-action-icon" aria-hidden="true"><i class="fa-solid fa-file-zipper"></i></span>
+      <div>
+        <h2 id="dl-action-title" class="dl-action-title">charisma2026-wedding-site.zip</h2>
+        <p class="dl-action-meta" id="dl-total">Preparing file list&hellip;</p>
+      </div>
+    </div>
+
+    <button class="btn btn-solid btn-lg" type="button" id="dl-build">
+      <i class="fa-solid fa-download" aria-hidden="true"></i> Build &amp; Download ZIP
+    </button>
+
+    <div class="dl-progress" id="dl-progress" role="status" aria-live="polite" hidden>
+      <div class="dl-bar"><span class="dl-bar-fill" id="dl-bar-fill"></span></div>
+      <p class="dl-progress-text" id="dl-progress-text">Working&hellip;</p>
+    </div>
+
+    <p class="dl-status" id="dl-status" role="status" aria-live="polite"></p>
+  </section>
+
+  <section class="dl-panel" aria-labelledby="dl-files-title">
+    <div class="dl-panel-head">
+      <h2 id="dl-files-title" class="dl-panel-title">
+        <i class="fa-solid fa-folder-tree" aria-hidden="true"></i> Files in the archive
+      </h2>
+      <span class="dl-count" id="dl-count">&mdash;</span>
+    </div>
+
+    <ul class="file-list" id="file-list">
+      <li class="dl-empty">Reading the project&hellip;</li>
+    </ul>
+
+    <p class="dl-hint">
+      <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+      Each file can also be downloaded on its own with the button beside it.
+    </p>
+  </section>
+
+  <section class="dl-panel dl-panel--note" aria-labelledby="dl-note-title">
+    <h2 id="dl-note-title" class="dl-panel-title">
+      <i class="fa-solid fa-lightbulb" aria-hidden="true"></i> Before you re-deploy
+    </h2>
+    <ul class="dl-notes">
+      <li><strong>Media:</strong> gallery images and reel videos are referenced by URL
+        (Google Drive ids are configured in <code>js/config.js</code>), so they are not
+        embedded in the zip.</li>
+      <li><strong>Secrets:</strong> <code>js/config.js</code> ships with empty Zainpay and
+        Supabase keys. Add your own before going live &mdash; never commit secret keys.</li>
+      <li><strong>Data:</strong> the zip carries the <em>schema</em>
+        (<code>.tables/schema.json</code>), not the rows. A fresh deploy starts with an
+        empty database.</li>
+      <li><strong>Keep-alive:</strong> <code>.github/workflows/keepalive.yml</code> needs
+        the <code>SITE_URL</code> repository variable set to your live address.</li>
+    </ul>
+  </section>
+
+  <p class="dl-back"><a href="index.html"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Back to the invitation</a></p>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <p class="footer-monogram" aria-hidden="true">C<span>&amp;</span>U</p>
+    <p class="footer-names">Usman Fori <span aria-hidden="true">&amp;</span> Charity Ishaku</p>
+    <p class="footer-hash">#Charisma2026</p>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="js/download.js"></script>
+<script src="https://www.genspark.ai/sandbox_inspect.js"></script></body>
+</html>
