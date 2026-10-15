@@ -369,6 +369,26 @@
   }
 
   /* ---------------- Portrait film reel ---------------- */
+  function initExclusiveVideoPlayback() {
+    document.addEventListener('play', function (event) {
+      var activeVideo = event.target;
+      if (!activeVideo || activeVideo.tagName !== 'VIDEO') return;
+
+      $$('video').forEach(function (video) {
+        if (video !== activeVideo && !video.paused) video.pause();
+      });
+
+      var activeCard = activeVideo.closest('.reel-card');
+      if (activeCard) activeCard.classList.add('is-playing');
+    }, true);
+
+    document.addEventListener('pause', function (event) {
+      var pausedCard = event.target && event.target.closest
+        ? event.target.closest('.reel-card') : null;
+      if (pausedCard) pausedCard.classList.remove('is-playing');
+    }, true);
+  }
+
   function setHeroVideo(items) {
     var video = $('#hero-video');
     var source = video && $('source', video);
@@ -481,7 +501,6 @@
       if (n === index) return;
       index = n;
       activate(play !== false);
-      if (play !== false) restartAutoplay();
     }
 
     /* manual play button on a card */
@@ -492,13 +511,12 @@
           e.stopPropagation();
           index = i;
           activate(true);
-          restartAutoplay();
         });
       }
     });
 
     dots.forEach(function (d, i) {
-      d.addEventListener('click', function () { index = i; activate(true); restartAutoplay(); });
+      d.addEventListener('click', function () { index = i; activate(true); });
     });
 
     if (prev) prev.addEventListener('click', function () { go(-1, true); });
@@ -527,26 +545,11 @@
 
     window.addEventListener('resize', function () { move(); });
 
-    /* autoplay through the reel while it is on screen */
-    var autoplayTimer = null;
-
-    function stopAutoplay() {
-      if (autoplayTimer) { clearInterval(autoplayTimer); autoplayTimer = null; }
-    }
-    function restartAutoplay() {
-      stopAutoplay();
-      autoplayTimer = setInterval(function () {
-        if (document.hidden) return;
-        index = (index + 1) % cards.length;
-        activate(true);
-      }, 6000);
-    }
-
     if ('IntersectionObserver' in window) {
       var io = new IntersectionObserver(function (entries) {
         entries.forEach(function (en) {
-          if (en.isIntersecting) { activate(true); restartAutoplay(); }
-          else { stopAutoplay(); cards.forEach(function (c) { var v = $('.reel-video', c); if (v) v.pause(); }); }
+          if (en.isIntersecting) move();
+          else cards.forEach(function (c) { var v = $('.reel-video', c); if (v) v.pause(); });
         });
       }, { threshold: 0.45 });
       io.observe(viewport);
@@ -554,13 +557,7 @@
       activate(false);
     }
 
-    document.addEventListener('visibilitychange', function () {
-      if (document.hidden) stopAutoplay();
-      else restartAutoplay();
-    });
-
-    activate(true);
-    restartAutoplay();
+    activate(false);
   }
 
   /* ---------------- Donation & gifting cards ---------------- */
@@ -949,6 +946,7 @@
     initHeader();
     initReveal();
     initCountdown();
+    initExclusiveVideoPlayback();
     initLightbox();
     initMap();
     initCalendarAndShare();
