@@ -68,7 +68,7 @@ const GDRIVE = {
      Drive API access, restricted to this site and the Google Drive API. */
   galleryFolderId: '1_otZjgILJfrWNiNsQS1eMT28OMEvWdKy',
   videoFolderId: '1ALHWZ8NPTULJ_C7Wl9bSA5285fn_HP6P',
-  galleryApiKey: '', // Set the API key STRING; the key resource UID is not accepted here.
+  galleryApiKey: 'AIzaSyAWRPxSzVU72URWOcr81M4oChQEfps0tzY',
   /* gallery row id  -> Drive file id or share link */
   imageFileIds: {
     // 'gal-01': '1AbCdEfGhIjKlMnOpQrStUvWxYz12345',
@@ -150,8 +150,8 @@ function loadDriveGalleryFolder(folderId) {
 }
 
 /* Lists public video files for the portrait reel. */
-function loadDriveReelFolder() {
-  return loadDriveFolder(GDRIVE.videoFolderId, 'video/').then(function (files) {
+function loadDriveReelFolder(folderId) {
+  return loadDriveFolder(folderId || GDRIVE.videoFolderId, 'video/').then(function (files) {
     if (!files) return null;
     return files.map(function (file, index) {
       var title = file.name.replace(/\.[^.]+$/, '');
@@ -162,6 +162,9 @@ function loadDriveReelFolder() {
         title: title,
         caption: 'Our story in motion',
         video: '',
+        media_type: 'video',
+        mime_type: file.mimeType || 'video/mp4',
+        video_url: driveVideo(file.id),
         file_size: Number(file.size) || 0,
         poster: file.thumbnailLink || driveImage(file.id, 900)
       };

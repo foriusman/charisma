@@ -619,7 +619,8 @@
       return;
     }
 
-    galleryState.items = rows.map(function (r) {
+    var imageRows = rows.filter(function (r) { return r.media_type !== 'video'; });
+    galleryState.items = imageRows.map(function (r) {
       /* Task 4: a configured Google Drive id wins; otherwise use the row URL. */
       var resolved = (typeof resolveGalleryImage === 'function')
         ? resolveGalleryImage(r) : { url: r.image_url, kind: 'url' };
@@ -631,12 +632,26 @@
       };
     });
 
-    grid.innerHTML = rows.map(function (r, i) {
+    var imageIndex = 0;
+    grid.innerHTML = rows.map(function (r) {
       var tag = r.tag || 'Gallery';
+      if (r.media_type === 'video') {
+        var videoSrc = r.video_url || ((typeof driveVideo === 'function') ? driveVideo(r.drive_file_id) : '');
+        return '<figure class="masonry-item gallery-video-item reveal" data-tag="' + esc(tag) + '">' +
+          '<div class="gallery-video-card">' +
+            '<video class="gallery-video" controls preload="metadata" playsinline poster="' + esc(r.poster || '') + '" aria-label="' + esc(r.title || r.caption || 'Wedding video') + '">' +
+              '<source src="' + esc(videoSrc) + '" type="' + esc(r.mime_type || 'video/mp4') + '">' +
+              'Your browser does not support the video tag.' +
+            '</video>' +
+            '<figcaption class="gallery-video-caption">' + esc(r.title || r.caption || '') + '</figcaption>' +
+          '</div>' +
+        '</figure>';
+      }
       var resolved = (typeof resolveGalleryImage === 'function')
         ? resolveGalleryImage(r) : { url: r.image_url, kind: 'url' };
       var src = resolved.kind === 'drive' ? resolved.url : sized(resolved.url, 900);
-      return '<figure class="masonry-item reveal" data-tag="' + esc(tag) + '" data-index="' + i + '">' +
+      var itemIndex = imageIndex++;
+      return '<figure class="masonry-item reveal" data-tag="' + esc(tag) + '" data-index="' + itemIndex + '">' +
         '<button class="gallery-figure" type="button" aria-label="Open image: ' + esc(r.caption || 'wedding photograph') + '">' +
           '<img src="' + esc(src) + '" alt="' + esc(r.caption || 'Wedding photograph') + '" loading="lazy" decoding="async">' +
           '<span class="gallery-tag">' + esc(tag) + '</span>' +
@@ -686,7 +701,7 @@
   function visibleGalleryItems() {
     var visible = [];
     $$('#gallery-grid .masonry-item').forEach(function (el) {
-      if (el.classList.contains('is-hidden')) return;
+      if (el.classList.contains('is-hidden') || el.classList.contains('gallery-video-item')) return;
       visible.push(Number(el.getAttribute('data-index')));
     });
     return visible;
@@ -940,22 +955,33 @@
 
     getRows('love_story', { limit: 50 }).then(renderStory);
     getRows('gifts', { limit: 50 }).then(renderGifts);
+    var gallery = $('#gallery');
+    var videoFolderId = gallery && gallery.getAttribute('data-drive-video-folder-id');
     var driveReels = (typeof loadDriveReelFolder === 'function')
-      ? loadDriveReelFolder() : Promise.resolve(null);
-    driveReels.then(function (items) {
+      ? loadDriveReelFolder(videoFolderId) : Promise.resolve(null);
+    driveReels = driveReels.then(function (items) {
       if (items && items.length) setHeroVideo(items);
       initReel(items && items.length ? items : undefined);
+      return items;
     }, function () {
       initReel();
+      return null;
     });
-    var gallery = $('#gallery');
     var galleryFolderId = gallery && gallery.getAttribute('data-drive-folder-id');
     var driveGallery = (typeof loadDriveGalleryFolder === 'function')
       ? loadDriveGalleryFolder(galleryFolderId) : Promise.resolve(null);
-    driveGallery.then(function (rows) {
-      return rows && rows.length ? { rows: rows } : getRows('gallery', { limit: 100 });
-    }, function () {
-      return getRows('gallery', { limit: 100 });
+    driveGallery = driveGallery.catch(function () { return null; });
+    Promise.all([driveGallery, driveReels]).then(function (media) {
+      var images = media[0];
+      var videos = media[1] || [];
+      var imageRows = images && images.length
+        ? Promise.resolve(images)
+        : getRows('gallery', { limit: 100 }).then(function (result) { return result.rows || []; });
+      return imageRows.then(function (rows) {
+        return { rows: rows.concat(videos.map(function (video) {
+          return Object.assign({}, video, { tag: 'Videos' });
+        })) };
+      });
     }).then(renderGallery);
     loadPrayers();
 

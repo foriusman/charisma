@@ -604,6 +604,17 @@ button { font: inherit; cursor: pointer; }
   transition: transform 0.4s var(--ease), opacity 0.4s var(--ease);
 }
 .gallery-figure:hover .gallery-caption { transform: none; opacity: 1; }
+.gallery-video-card {
+  overflow: hidden; border-radius: var(--radius); background: var(--card);
+  box-shadow: var(--shadow-sm);
+}
+.gallery-video {
+  display: block; width: 100%; aspect-ratio: 9 / 16; max-height: 500px;
+  object-fit: cover; background: var(--black);
+}
+.gallery-video-caption {
+  padding: 0.75rem 0.9rem; color: var(--ink-soft); font-size: 0.85rem;
+}
 .gallery-tag {
   position: absolute; top: 0.85rem; left: 0.85rem; z-index: 2;
   background: rgba(255,248,173,0.94); color: var(--brown-deep);
