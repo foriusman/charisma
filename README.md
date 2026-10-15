@@ -128,8 +128,27 @@ images/
 | `tables/{table}` `POST` | Create row | Used by the gift flow |
 | `tables/{table}/{id}` `PATCH` | Partial update | Used to confirm a payment |
 
-**Config entry points** (all in `js/config.js`): `JOTFORM.prayerFormUrl`, `GDRIVE.imageFileIds`,
-`GDRIVE.videoFileIds`, `ZAINPAY.*`, `SUPABASE.*`, `KEEPALIVE.*`.
+**Config entry points** (all in `js/config.js`): `JOTFORM.prayerFormUrl`, `GDRIVE.galleryFolderId`,
+`GDRIVE.videoFolderId`, `GDRIVE.galleryApiKey`, `GDRIVE.imageFileIds`, `GDRIVE.videoFileIds`, `ZAINPAY.*`,
+`SUPABASE.*`, `KEEPALIVE.*`.
+
+### Automatic Google Drive gallery
+
+The gallery and portrait reel can list image/video files directly from the public folders configured in
+`GDRIVE.galleryFolderId` and `GDRIVE.videoFolderId`. To enable automatic folder loading:
+
+1. Make sure the folder is shared as **Anyone with the link — Viewer**.
+2. In a Google Cloud project, enable the **Google Drive API** and create an API key.
+3. Restrict the key to the **Google Drive API** and to the website's HTTP referrers.
+   For local testing, add the local origin you use (for example `http://localhost:5500/*`).
+4. Set `GDRIVE.galleryApiKey` in `js/config.js`.
+
+Folder images and videos then appear automatically, ordered by filename. Image captions and video titles
+come from filenames. If listing fails or the key is unset, the existing gallery records and reel videos
+are used instead. Google Drive videos must be playable/downloadable by viewers with the link; very large
+files may not stream reliably from Drive and should be hosted on a video CDN for dependable playback.
+Browser API keys are visible to visitors, so restrict the key as above; never put a
+service-account credential or other secret in this file.
 
 ---
 

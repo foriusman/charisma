@@ -369,7 +369,7 @@
   }
 
   /* ---------------- Portrait film reel ---------------- */
-  function initReel() {
+  function initReel(sourceItems) {
     var track = $('#reel-track');
     var viewport = $('#reel-viewport');
     var prev = $('#reel-prev');
@@ -377,7 +377,7 @@
     var dotsBox = $('#reel-dots');
     if (!track || !viewport) return;
 
-    var items = (typeof REELS !== 'undefined') ? REELS : [];
+    var items = sourceItems || ((typeof REELS !== 'undefined') ? REELS : []);
     if (!items.length) return;
 
     track.innerHTML = items.map(function (r, i) {
@@ -904,14 +904,26 @@
     initHeader();
     initReveal();
     initCountdown();
-    initReel();
     initLightbox();
     initMap();
     initCalendarAndShare();
 
     getRows('love_story', { limit: 50 }).then(renderStory);
     getRows('gifts', { limit: 50 }).then(renderGifts);
-    getRows('gallery', { limit: 100 }).then(renderGallery);
+    var driveReels = (typeof loadDriveReelFolder === 'function')
+      ? loadDriveReelFolder() : Promise.resolve(null);
+    driveReels.then(function (items) {
+      initReel(items && items.length ? items : undefined);
+    }, function () {
+      initReel();
+    });
+    var driveGallery = (typeof loadDriveGalleryFolder === 'function')
+      ? loadDriveGalleryFolder() : Promise.resolve(null);
+    driveGallery.then(function (rows) {
+      return rows && rows.length ? { rows: rows } : getRows('gallery', { limit: 100 });
+    }, function () {
+      return getRows('gallery', { limit: 100 });
+    }).then(renderGallery);
     loadPrayers();
 
     /* Re-centre the reel once images/fonts settle */

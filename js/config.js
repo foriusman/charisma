@@ -64,6 +64,11 @@ const JOTFORM = {
    "exceeds quota" page for very popular files. For a wedding-scale
    audience it is fine; for anything larger, use R2/S3 instead.     */
 const GDRIVE = {
+  /* Public folder listing for the photo gallery. Add a browser API key with
+     Drive API access, restricted to this site and the Google Drive API. */
+  galleryFolderId: '1_otZjgILJfrWNiNsQS1eMT28OMEvWdKy',
+  videoFolderId: '1ALHWZ8NPTULJ_C7Wl9bSA5285fn_HP6P',
+  galleryApiKey: '',
   /* gallery row id  -> Drive file id or share link */
   imageFileIds: {
     // 'gal-01': '1AbCdEfGhIjKlMnOpQrStUvWxYz12345',
@@ -91,6 +96,76 @@ function driveImage(value, width) {
   var id = normalizeDriveId(value);
   if (!id) return '';
   return 'https://drive.google.com/thumbnail?id=' + id + '&sz=w' + (width || 1600);
+}
+
+/* Lists public files of the requested media type from a Drive folder. */
+function loadDriveFolder(folderId, mimeType) {
+  if (!folderId || !GDRIVE.galleryApiKey) return Promise.resolve(null);
+  var files = [];
+  var pageToken = '';
+  function loadPage() {
+    var params = new URLSearchParams({
+      q: "'" + folderId + "' in parents and mimeType contains '" + mimeType + "' and trashed = false",
+      pageSize: '1000',
+      orderBy: 'name',
+      fields: 'nextPageToken,files(id,name,mimeType,thumbnailLink)',
+      key: GDRIVE.galleryApiKey
+    });
+    if (pageToken) params.set('pageToken', pageToken);
+
+    return fetch('https://www.googleapis.com/drive/v3/files?' + params.toString(), {
+      headers: { Accept: 'application/json' }
+    }).then(function (response) {
+      if (!response.ok) throw new Error('Google Drive folder request failed: ' + response.status);
+      return response.json();
+    }).then(function (result) {
+      files = files.concat(result.files || []);
+      pageToken = result.nextPageToken || '';
+      return pageToken ? loadPage() : files;
+    });
+  }
+
+  return loadPage().then(function (items) {
+    return items.sort(function (a, b) {
+      return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+    });
+  });
+}
+
+/* Lists public image files in the configured gallery folder. */
+function loadDriveGalleryFolder() {
+  return loadDriveFolder(GDRIVE.galleryFolderId, 'image/').then(function (files) {
+    if (!files) return null;
+    return files.map(function (file, index) {
+      return {
+        id: 'drive-' + file.id,
+        drive_file_id: file.id,
+        caption: file.name.replace(/\.[^.]+$/, ''),
+        image_url: driveImage(file.id, 1600),
+        tag: 'Photo Album',
+        sort_order: index + 1
+      };
+    });
+  });
+}
+
+/* Lists public video files for the portrait reel. */
+function loadDriveReelFolder() {
+  return loadDriveFolder(GDRIVE.videoFolderId, 'video/').then(function (files) {
+    if (!files) return null;
+    return files.map(function (file, index) {
+      var title = file.name.replace(/\.[^.]+$/, '');
+      return {
+        id: 'drive-reel-' + file.id,
+        drive_file_id: file.id,
+        badge: 'Reel ' + String(index + 1).padStart(2, '0'),
+        title: title,
+        caption: 'Our story in motion',
+        video: '',
+        poster: file.thumbnailLink || driveImage(file.id, 900)
+      };
+    });
+  });
 }
 
 /* Progressive stream URL for <video src>. */
@@ -158,6 +233,7 @@ const KEEPALIVE = {
 /* ---- Resolvers: prefer a Google Drive id when one is configured,
         otherwise fall back to the URL stored on the row. ---- */
 function resolveGalleryImage(row) {
+  if (row && row.drive_file_id) return { url: driveImage(row.drive_file_id, 1600), kind: 'drive' };
   var drive = (typeof GDRIVE !== 'undefined' && GDRIVE.imageFileIds)
     ? GDRIVE.imageFileIds[row && row.id] : null;
   if (drive) return { url: driveImage(drive, 1600), kind: 'drive' };
@@ -165,6 +241,7 @@ function resolveGalleryImage(row) {
 }
 
 function resolveReelVideo(reel) {
+  if (reel && reel.drive_file_id) return { url: driveVideo(reel.drive_file_id), kind: 'drive' };
   var drive = (typeof GDRIVE !== 'undefined' && GDRIVE.videoFileIds)
     ? GDRIVE.videoFileIds[reel && reel.id] : null;
   if (drive) return { url: driveVideo(drive), kind: 'drive' };
