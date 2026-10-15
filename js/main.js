@@ -389,34 +389,13 @@
     }, true);
   }
 
-  function setHeroVideo(items) {
-    var video = $('#hero-video');
-    var source = video && $('source', video);
-    if (!source || !items || !items.length) return;
-
-    var selected = items.slice().sort(function (a, b) {
-      return (a.file_size || Infinity) - (b.file_size || Infinity);
+  function setHeroImage(rows) {
+    var image = $('#hero-image');
+    var heroPhoto = rows.filter(function (row) {
+      return row.file_name && row.file_name.toLowerCase() === '1.jpeg';
     })[0];
-    var resolved = (typeof resolveReelVideo === 'function')
-      ? resolveReelVideo(selected) : { url: selected.video };
-    if (!resolved.url) return;
-
-    var fallbackUrl = source.getAttribute('data-fallback') || source.getAttribute('src');
-    source.setAttribute('data-fallback', fallbackUrl);
-    video.addEventListener('error', function () {
-      if (source.getAttribute('src') !== resolved.url) return;
-      source.setAttribute('src', fallbackUrl);
-      video.poster = 'https://drive.google.com/file/d/13Imo51_TDnx_DfaDLQKIKg_szr23V3mN/view?usp=drive_link';
-      video.load();
-      var fallbackPlay = video.play();
-      if (fallbackPlay && fallbackPlay.catch) fallbackPlay.catch(function () {});
-    }, { once: true });
-
-    if (selected.poster) video.poster = selected.poster;
-    source.setAttribute('src', resolved.url);
-    video.load();
-    var playback = video.play();
-    if (playback && playback.catch) playback.catch(function () { /* browser autoplay policy */ });
+    if (!image || !heroPhoto) return;
+    image.src = heroPhoto.image_url;
   }
 
   function initReel(sourceItems) {
@@ -958,7 +937,6 @@
     var driveReels = (typeof loadDriveReelFolder === 'function')
       ? loadDriveReelFolder(videoFolderId) : Promise.resolve(null);
     driveReels = driveReels.then(function (items) {
-      if (items && items.length) setHeroVideo(items);
       initReel(items && items.length ? items : undefined);
       return items;
     }, function () {
@@ -976,6 +954,7 @@
         ? Promise.resolve(images)
         : getRows('gallery', { limit: 100 }).then(function (result) { return result.rows || []; });
       return imageRows.then(function (rows) {
+        setHeroImage(images || []);
         return { rows: rows.concat(videos.map(function (video) {
           return Object.assign({}, video, { tag: 'Videos' });
         })) };

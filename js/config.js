@@ -140,6 +140,7 @@ function loadDriveGalleryFolder(folderId) {
       return {
         id: 'drive-' + file.id,
         drive_file_id: file.id,
+        file_name: file.name,
         caption: file.name.replace(/\.[^.]+$/, ''),
         image_url: driveImage(file.id, 1600),
         tag: 'Photo Album',
