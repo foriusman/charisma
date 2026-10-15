@@ -1,0 +1,94 @@
+I’ll confirm the project’s current assumptions against the Vercel + Supabase pattern, then I’ll give you the cleanest backend setup for this wedding site.
+
+## ✅ That is the right direction
+
+For a Vercel deployment, the clean pattern is:
+
+- static frontend on Vercel
+- Supabase for database / payment rows
+- backend API on Vercel for Zainpay secret handling
+
+This matches the project’s design in `config.js:100-144` and `site-payments.js:42-89`: the frontend should never hold the secret Zainpay key.
+
+---
+
+## Recommended architecture
+
+### 1) Frontend
+Keep the site static:
+- `index.html`
+- `admin.html`
+- `download.html`
+
+### 2) Supabase
+Use Supabase as your payment-record database, with a table like:
+
+- `wedding_payments`
+
+This is exactly the flow the app expects.
+
+### 3) Backend on Vercel
+Create API routes such as:
+
+- `/api/zainpay/create-charge`
+- `/api/zainpay/confirm`
+
+These endpoints do the real work:
+
+- create Zainpay charge using secret key
+- return `checkoutUrl` to the browser
+- receive webhook or callback and mark payment as `confirmed`
+
+> For Vercel, I strongly recommend serverless functions instead of a full standalone Express app unless you specifically want a custom Node server. It is simpler and more Vercel-native.
+
+---
+
+## Best setup for this repo
+
+Use:
+- Vercel for hosting
+- Supabase for storage
+- Vercel serverless functions for the Zainpay API
+
+Your frontend config would become something like:
+
+- `ZAINPAY.mode = 'live'`
+- `ZAINPAY.chargeEndpoint = 'https://your-app.vercel.app/api/zainpay/create-charge'`
+- `SUPABASE.url = 'https://xxxxx.supabase.co'`
+- `SUPABASE.anonKey = 'public-anon-key'`
+
+Then on the backend, store only:
+- `ZAINPAY_SECRET_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `VERCEL_URL` or `APP_URL`
+
+These should be in Vercel environment variables, not in browser code.
+
+---
+
+## If you choose Express
+
+You can still use Express, but deploy it as a Node server or serverless wrapper on Vercel. The important part is:
+
+- Express handles the secret logic
+- Supabase stores the payment record
+- browser only calls the backend endpoint
+
+---
+
+## Minimal flow
+
+1. User clicks gift on the site
+2. Frontend sends request to `/api/zainpay/create-charge`
+3. Backend creates the Zainpay charge with a secret key
+4. Backend returns `checkoutUrl`
+5. Browser redirects to Zainpay
+6. Zainpay calls `/api/zainpay/confirm`
+7. Backend updates payment status in Supabase
+
+That is the correct production pattern.
+
+If you want, I can next give you:
+- a Vercel folder structure
+- the exact Supabase SQL
+- a working Node/Express API example for the two Zainpay routes
