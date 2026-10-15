@@ -139,9 +139,17 @@ The gallery and portrait reel can list image/video files directly from the publi
 
 1. Make sure the folder is shared as **Anyone with the link — Viewer**.
 2. In a Google Cloud project, enable the **Google Drive API** and create an API key.
-3. Restrict the key to the **Google Drive API** and to the website's HTTP referrers.
+3. Restrict the key to the **Google Drive API** and add website HTTP referrer restrictions
+   (production domain, `www` domain if used, and local development origin).
    For local testing, add the local origin you use (for example `http://localhost:5500/*`).
-4. Set `GDRIVE.galleryApiKey` in `js/config.js`.
+4. Retrieve the key string locally. The API key resource UID shown by `gcloud services api-keys list`
+   is not the key string used by the browser:
+
+   ```powershell
+   gcloud services api-keys get-key-string 52465181-8d0d-402f-a58f-2bdd7177b43e --project=wedding-511718
+   ```
+
+5. Put the returned `keyString` value in `GDRIVE.galleryApiKey` in `js/config.js`.
 
 Folder images and videos then appear automatically, ordered by filename. Image captions and video titles
 come from filenames. If listing fails or the key is unset, the existing gallery records and reel videos

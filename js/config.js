@@ -68,7 +68,7 @@ const GDRIVE = {
      Drive API access, restricted to this site and the Google Drive API. */
   galleryFolderId: '1_otZjgILJfrWNiNsQS1eMT28OMEvWdKy',
   videoFolderId: '1ALHWZ8NPTULJ_C7Wl9bSA5285fn_HP6P',
-  galleryApiKey: '',
+  galleryApiKey: '', // Set the API key STRING; the key resource UID is not accepted here.
   /* gallery row id  -> Drive file id or share link */
   imageFileIds: {
     // 'gal-01': '1AbCdEfGhIjKlMnOpQrStUvWxYz12345',
