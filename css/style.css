@@ -311,38 +311,61 @@ button { font: inherit; cursor: pointer; }
 }
 @keyframes cue { 0% { opacity: 0; top: 9px; } 40% { opacity: 1; } 100% { opacity: 0; top: 25px; } }
 
-/* ---------------- 8. Love story timeline ---------------- */
+/* ---------------- 8. Love story chapters ---------------- */
 .story { background: var(--bg); }
-.timeline { position: relative; display: grid; gap: 1.4rem; max-width: 900px; margin-inline: auto; }
-.timeline::before {
-  content: ""; position: absolute; left: 27px; top: 10px; bottom: 10px; width: 1px;
-  background: linear-gradient(180deg, transparent, var(--line-strong) 12%, var(--line-strong) 88%, transparent);
+.story-slider {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center;
+  gap: 1rem; max-width: 860px; margin-inline: auto;
 }
-.story-item { position: relative; padding-left: 4.4rem; }
+.story-track {
+  display: flex; gap: 1rem; min-width: 0; overflow-x: auto; overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory; scroll-behavior: smooth; scrollbar-width: none;
+  list-style: none; padding: 0.5rem 0.15rem 1rem; margin: 0;
+}
+.story-track::-webkit-scrollbar { display: none; }
+.story-item { flex: 0 0 100%; min-width: 0; scroll-snap-align: center; }
 .story-badge {
-  position: absolute; left: 0; top: 0.2rem;
-  width: 56px; height: 56px; border-radius: 50%;
-  display: grid; place-items: center; font-size: 1.15rem;
-  background: var(--brown); color: var(--cream);
-  border: 3px solid var(--bg); box-shadow: var(--shadow-sm);
+  width: 52px; height: 52px; border-radius: 50%; margin-bottom: 1rem;
+  display: grid; place-items: center; font-size: 1.05rem;
+  background: var(--brown); color: var(--cream); box-shadow: var(--shadow-sm);
 }
 .story-card {
   background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
-  padding: clamp(1.2rem, 3vw, 1.9rem); box-shadow: var(--shadow-sm);
+  min-height: 260px; padding: clamp(1.25rem, 3.5vw, 2.1rem); box-shadow: var(--shadow-sm);
   transition: transform 0.35s var(--ease), box-shadow 0.35s var(--ease), border-color 0.35s;
 }
 .story-card:hover { transform: translateY(-4px); box-shadow: var(--shadow); border-color: var(--line-strong); }
 .story-chapter {
-  font-size: 0.66rem; letter-spacing: 0.28em; text-transform: uppercase;
+  font-size: 0.66rem; letter-spacing: 0.18em; text-transform: uppercase;
   color: var(--brown); font-weight: 600; margin-bottom: 0.4rem;
 }
-.story-item h3 { font-size: clamp(1.15rem, 2.6vw, 1.5rem); margin-bottom: 0.35rem; }
+.story-item h3 { font-size: clamp(1.3rem, 2.6vw, 1.7rem); margin-bottom: 0.55rem; }
 .story-date {
   display: inline-block; font-size: 0.76rem; color: var(--brown-soft);
   background: rgba(186,170,135,0.24); border-radius: var(--radius-pill);
   padding: 0.16rem 0.7rem; margin-bottom: 0.75rem;
 }
 .story-text { color: var(--ink-soft); margin: 0; font-size: 0.97rem; }
+.story-points {
+  display: grid; gap: 0.8rem; list-style: none; padding: 0; margin: 0.8rem 0 0;
+}
+.story-points li { color: var(--ink-soft); font-size: 0.93rem; line-height: 1.65; }
+.story-points strong { color: var(--brown); font-weight: 600; }
+.story-nav, .story-dot {
+  border: 1px solid var(--line-strong); background: var(--card); color: var(--brown);
+  cursor: pointer; transition: background 0.2s var(--ease), color 0.2s var(--ease), opacity 0.2s;
+}
+.story-nav {
+  width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center;
+}
+.story-nav:hover:not(:disabled) { background: var(--brown); color: var(--cream); }
+.story-nav:disabled { opacity: 0.35; cursor: default; }
+.story-dots { grid-column: 2; display: flex; justify-content: center; gap: 0.55rem; }
+.story-dot { width: 10px; height: 10px; padding: 0; border-radius: 50%; }
+.story-dot.is-active { background: var(--brown); transform: scale(1.25); }
+.story-slider:focus-visible, .story-track:focus-visible, .story-nav:focus-visible, .story-dot:focus-visible {
+  outline: 2px solid var(--brown); outline-offset: 3px;
+}
 
 /* ---------------- 9. Films reel ---------------- */
 .films { background: linear-gradient(180deg, var(--bg-alt) 0%, var(--bg) 100%); overflow: hidden; }
@@ -797,9 +820,6 @@ iframe { max-width: 100%; }
   .primary-nav a.is-active { color: var(--brown); font-weight: 600; }
 
   .masonry { columns: 2 200px; }
-  .timeline::before { left: 21px; }
-  .story-item { padding-left: 3.6rem; }
-  .story-badge { width: 44px; height: 44px; font-size: 0.95rem; }
 }
 
 @media (max-width: 640px) {
@@ -819,6 +839,10 @@ iframe { max-width: 100%; }
   .reel-card { flex-basis: min(78vw, 300px); }
   .reel-nav { width: 40px; height: 40px; }
   .reel-shell { padding-inline: 0.9rem; gap: 0.4rem; }
+
+  .story-slider { grid-template-columns: auto minmax(0, 1fr) auto; gap: 0.45rem; }
+  .story-nav { width: 36px; height: 36px; }
+  .story-card { min-height: 240px; }
 
   .masonry { columns: 1; }
   .gallery-caption { opacity: 1; transform: none; }

@@ -236,10 +236,27 @@ const REELS = [
    renders a complete invitation.                                  */
 const FALLBACK = {
   love_story: [
-    { id: 'story-01', chapter: 'Chapter One', date_label: 'Where it all began', title: 'A First Hello', story: 'It started with a simple greeting that neither of them thought much about at the time — a hello that turned into a conversation, and a conversation that refused to end.', icon: 'fa-solid fa-mug-hot', sort_order: 1 },
-    { id: 'story-02', chapter: 'Chapter Two', date_label: 'The slow becoming', title: 'Friends, Then More', story: 'Coffee dates became long calls. Somewhere between the laughter and the late-night talks, friendship quietly grew roots deeper than either of them expected.', icon: 'fa-solid fa-heart', sort_order: 2 },
-    { id: 'story-03', chapter: 'Chapter Three', date_label: 'The yes', title: 'The Proposal', story: 'With a heart full of certainty and hands that would not stop shaking, Usman asked Charity to spend forever with him. She said yes before he could finish the sentence.', icon: 'fa-solid fa-ring', sort_order: 3 },
-    { id: 'story-04', chapter: 'Chapter Four', date_label: '12 . 12 . 2026', title: 'Forever Begins', story: 'Two families, two cultures and one covenant. On Saturday, the 12th of December 2026, before God and the people they love most, Coffee and Vanilla become one.', icon: 'fa-solid fa-church', sort_order: 4 }
+    { id: 'story-01', chapter: 'Chapter One', date_label: 'The beginning', title: 'A First Hello', points: [
+      { label: 'The Spark', text: 'Coffee came to meet her at school for a simple introduction.' },
+      { label: 'The First Impression', text: 'He noticed her scent and offered a gentle compliment, while secretly taken by her camo shirt, baggy jeans, fringe-bang weave, and lip gloss.' },
+      { label: 'The Connection', text: 'Conversation flowed easily through family, culture, and life. His attentiveness and quiet care helped her feel completely comfortable.' },
+      { label: 'The Choice', text: 'Rather than pressuring her for a date, he left his number and gave her the freedom to decide whether to walk through the door he had opened.' }
+    ], icon: 'fa-solid fa-mug-hot', sort_order: 1 },
+    { id: 'story-02', chapter: 'Chapter Two', date_label: 'Three days that changed everything', title: 'Friends, Then More', points: [
+      { label: 'The Three Days', text: 'Three brief days of dates, laughter, and deep questions about values and dreams built a natural familiarity before Coffee had to leave for Kano.' },
+      { label: 'The Script to Her Heart', text: 'Beneath playful jokes about red dresses and tuxedos, Coffee shared how deeply he connected with her calm, gentle spirit and asked to take things to the next level.' },
+      { label: 'The Leap of Faith', text: 'Despite the distance and questions, she prayed and recognized the depth of their connection. Before he left for Kano, she answered: “I’d love to give it a try.”' }
+    ], icon: 'fa-solid fa-heart', sort_order: 2 },
+    { id: 'story-03', chapter: 'Chapter Three', date_label: 'February 14, 2026', title: 'The Question', points: [
+      { label: 'The Foundation', text: 'Over one year and ten months, daily conversations and intentional family involvement turned a simple agreement into a deep, peaceful love.' },
+      { label: 'The Valentine’s Surprise', text: 'Expecting a routine dinner in Maiduguri, she walked into a room filled with family, friends, cameras, and one question: “Will you marry me?”' },
+      { label: 'The Engagement', text: 'Overwhelmed with emotion and joy as he knelt before her, she answered, “Yes... I will,” turning their relationship into a lifelong commitment.' }
+    ], icon: 'fa-solid fa-ring', sort_order: 3 },
+    { id: 'story-04', chapter: 'Chapter Four', date_label: 'Counting down to 12.12.2026', title: 'Forever Begins', points: [
+      { label: 'The Preparation', text: 'Planning a wedding as a student brought plenty of decisions. Through prayer, fasting, and reading together, they kept their focus on marriage, not just the wedding.' },
+      { label: 'The Best Friend & Partner', text: 'Between secret dress selections, photoshoots, and stressful moments, Coffee’s patience and reassuring love reminded her that perfection was never the point.' },
+      { label: 'The Destination', text: 'She looks forward to walking down the aisle to her best friend, knowing their forever has already begun.' }
+    ], icon: 'fa-solid fa-church', sort_order: 4 }
   ],
   gallery: [
     { id: 'gal-01', caption: 'The beginning of forever', image_url: 'https://sspark.genspark.ai/i/Eelafi2c7JLqM5Xk?width=900', tag: 'Pre-Wedding', sort_order: 1 },

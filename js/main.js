@@ -269,9 +269,29 @@
     });
 
     if (!rows.length) {
-      list.innerHTML = '<li class="timeline-loading">Our story is being written…</li>';
-      list.removeAttribute('aria-busy');
-      return;
+      rows = [
+        { chapter: 'Chapter One', date_label: 'The beginning', title: 'A First Hello', points: [
+          { label: 'The Spark', text: 'Coffee came to meet her at school for a simple introduction.' },
+          { label: 'The First Impression', text: 'He noticed her scent and offered a gentle compliment, while secretly taken by her camo shirt, baggy jeans, fringe-bang weave, and lip gloss.' },
+          { label: 'The Connection', text: 'Conversation flowed easily through family, culture, and life. His attentiveness and quiet care helped her feel completely comfortable.' },
+          { label: 'The Choice', text: 'Rather than pressuring her for a date, he left his number and gave her the freedom to decide whether to walk through the door he had opened.' }
+        ], icon: 'fa-solid fa-mug-hot' },
+        { chapter: 'Chapter Two', date_label: 'Three days that changed everything', title: 'Friends, Then More', points: [
+          { label: 'The Three Days', text: 'Three brief days of dates, laughter, and deep questions about values and dreams built a natural familiarity before Coffee had to leave for Kano.' },
+          { label: 'The Script to Her Heart', text: 'Beneath playful jokes about red dresses and tuxedos, Coffee shared how deeply he connected with her calm, gentle spirit and asked to take things to the next level.' },
+          { label: 'The Leap of Faith', text: 'Despite the distance and questions, she prayed and recognized the depth of their connection. Before he left for Kano, she answered: “I’d love to give it a try.”' }
+        ], icon: 'fa-solid fa-heart' },
+        { chapter: 'Chapter Three', date_label: 'February 14, 2026', title: 'The Question', points: [
+          { label: 'The Foundation', text: 'Over one year and ten months, daily conversations and intentional family involvement turned a simple agreement into a deep, peaceful love.' },
+          { label: 'The Valentine’s Surprise', text: 'Expecting a routine dinner in Maiduguri, she walked into a room filled with family, friends, cameras, and one question: “Will you marry me?”' },
+          { label: 'The Engagement', text: 'Overwhelmed with emotion and joy as he knelt before her, she answered, “Yes... I will,” turning their relationship into a lifelong commitment.' }
+        ], icon: 'fa-solid fa-ring' },
+        { chapter: 'Chapter Four', date_label: 'Counting down to 12.12.2026', title: 'Forever Begins', points: [
+          { label: 'The Preparation', text: 'Planning a wedding as a student brought plenty of decisions. Through prayer, fasting, and reading together, they kept their focus on marriage, not just the wedding.' },
+          { label: 'The Best Friend & Partner', text: 'Between secret dress selections, photoshoots, and stressful moments, Coffee’s patience and reassuring love reminded her that perfection was never the point.' },
+          { label: 'The Destination', text: 'She looks forward to walking down the aisle to her best friend, knowing their forever has already begun.' }
+        ], icon: 'fa-solid fa-church' }
+      ];
     }
 
     list.innerHTML = rows.map(function (r) {
@@ -281,13 +301,71 @@
           '<p class="story-chapter">' + esc(r.chapter || '') + '</p>' +
           '<h3>' + esc(r.title || '') + '</h3>' +
           (r.date_label ? '<p class="story-date">' + esc(r.date_label) + '</p>' : '') +
-          '<p class="story-text">' + esc(r.story || '') + '</p>' +
+          (Array.isArray(r.points) ? '<ul class="story-points">' + r.points.map(function (point) {
+            return '<li><strong>' + esc(point.label || '') + '</strong> ' + esc(point.text || '') + '</li>';
+          }).join('') + '</ul>' : '<p class="story-text">' + esc(r.story || '') + '</p>') +
         '</div>' +
       '</li>';
     }).join('');
 
     list.removeAttribute('aria-busy');
     observeDynamic(list);
+
+    var prev = $('#story-prev');
+    var next = $('#story-next');
+    var dotsBox = $('#story-dots');
+    var cards = $$('.story-item', list);
+    if (!cards.length) return;
+    var index = 0;
+
+    if (dotsBox) {
+      dotsBox.innerHTML = cards.map(function (card, i) {
+        return '<button class="story-dot' + (i === 0 ? ' is-active' : '') + '" type="button" aria-pressed="' +
+          (i === 0 ? 'true' : 'false') + '" aria-label="Go to ' + esc($('.story-chapter', card).textContent) + '"></button>';
+      }).join('');
+    }
+    var dots = dotsBox ? $$('.story-dot', dotsBox) : [];
+
+    function update() {
+      cards[index].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      if (prev) prev.disabled = index === 0;
+      if (next) next.disabled = index === cards.length - 1;
+      dots.forEach(function (dot, i) {
+        dot.classList.toggle('is-active', i === index);
+        dot.setAttribute('aria-pressed', i === index ? 'true' : 'false');
+      });
+    }
+
+    function go(to) {
+      index = Math.max(0, Math.min(cards.length - 1, to));
+      update();
+    }
+
+    if (prev) prev.addEventListener('click', function () { go(index - 1); });
+    if (next) next.addEventListener('click', function () { go(index + 1); });
+    dots.forEach(function (dot, i) { dot.addEventListener('click', function () { go(i); }); });
+    list.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowRight') { e.preventDefault(); go(index + 1); }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); go(index - 1); }
+    });
+    list.addEventListener('scroll', function () {
+      var trackBounds = list.getBoundingClientRect();
+      var center = trackBounds.left + trackBounds.width / 2;
+      var nearest = cards.reduce(function (closest, card, i) {
+        var bounds = card.getBoundingClientRect();
+        var distance = Math.abs(bounds.left + bounds.width / 2 - center);
+        return distance < closest.distance ? { index: i, distance: distance } : closest;
+      }, { index: index, distance: Infinity });
+      if (nearest.index !== index) {
+        index = nearest.index;
+        if (prev) prev.disabled = index === 0;
+        if (next) next.disabled = index === cards.length - 1;
+        dots.forEach(function (dot, i) {
+          dot.classList.toggle('is-active', i === index);
+          dot.setAttribute('aria-pressed', i === index ? 'true' : 'false');
+        });
+      }
+    }, { passive: true });
   }
 
   /* ---------------- Portrait film reel ---------------- */

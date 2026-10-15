@@ -12,7 +12,7 @@
 <meta property="og:type" content="website">
 <meta property="og:title" content="Usman &amp; Charity — The Charisma Wedding">
 <meta property="og:description" content="Saturday, 12th December 2026 · EYN LCC Abuja Sharaton, Maiduguri. #Charisma2026">
-<meta property="og:image" content="https://sspark.genspark.ai/i/Eelafi2c7JLqM5Xk?width=2560">
+<meta property="og:image" content="https://drive.google.com/file/d/13Imo51_TDnx_DfaDLQKIKg_szr23V3mN/view?usp=drive_link">
 <meta name="twitter:card" content="summary_large_image">
 
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23703104'/%3E%3Ctext x='32' y='44' font-family='Georgia,serif' font-size='34' fill='%23FFF8AD' text-anchor='middle'%3EU%26C%3C/text%3E%3C/svg%3E">
@@ -64,7 +64,7 @@
   <!-- ============ HERO ============ -->
   <section class="hero" id="hero">
     <video class="hero-media" id="hero-video" autoplay muted loop playsinline preload="auto"
-           poster="https://sspark.genspark.ai/i/Eelafi2c7JLqM5Xk?width=2560" aria-hidden="true">
+           poster="https://drive.google.com/file/d/13Imo51_TDnx_DfaDLQKIKg_szr23V3mN/view?usp=drive_link" aria-hidden="true">
       <source src="https://mdn.github.io/shared-assets/videos/flower.mp4" type="video/mp4">
     </video>
     <div class="hero-scrim" aria-hidden="true"></div>
@@ -117,9 +117,18 @@
         </p>
       </header>
 
-      <ol class="timeline" id="story-timeline" aria-busy="true">
-        <li class="timeline-loading">Loading our story&hellip;</li>
-      </ol>
+      <div class="story-slider reveal">
+        <button class="story-nav story-prev" id="story-prev" type="button" aria-label="Previous chapter" disabled>
+          <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+        </button>
+        <ol class="story-track" id="story-timeline" aria-label="Our love story chapters" aria-busy="true" tabindex="0">
+          <li class="timeline-loading">Loading our story&hellip;</li>
+        </ol>
+        <button class="story-nav story-next" id="story-next" type="button" aria-label="Next chapter" disabled>
+          <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+        </button>
+        <div class="story-dots" id="story-dots" role="group" aria-label="Choose a story chapter"></div>
+      </div>
     </div>
   </section>
 
