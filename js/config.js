@@ -132,9 +132,9 @@ function loadDriveFolder(folderId, mimeType) {
   });
 }
 
-/* Lists public image files in the configured gallery folder. */
-function loadDriveGalleryFolder() {
-  return loadDriveFolder(GDRIVE.galleryFolderId, 'image/').then(function (files) {
+/* Lists public image files in the supplied gallery folder. */
+function loadDriveGalleryFolder(folderId) {
+  return loadDriveFolder(folderId || GDRIVE.galleryFolderId, 'image/').then(function (files) {
     if (!files) return null;
     return files.map(function (file, index) {
       return {

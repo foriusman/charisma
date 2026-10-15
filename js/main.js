@@ -948,8 +948,10 @@
     }, function () {
       initReel();
     });
+    var gallery = $('#gallery');
+    var galleryFolderId = gallery && gallery.getAttribute('data-drive-folder-id');
     var driveGallery = (typeof loadDriveGalleryFolder === 'function')
-      ? loadDriveGalleryFolder() : Promise.resolve(null);
+      ? loadDriveGalleryFolder(galleryFolderId) : Promise.resolve(null);
     driveGallery.then(function (rows) {
       return rows && rows.length ? { rows: rows } : getRows('gallery', { limit: 100 });
     }, function () {
