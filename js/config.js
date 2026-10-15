@@ -45,7 +45,7 @@ const WEDDING = {
    https://form.jotform.com/241234567890123
    The CTA button opens it in a new tab (target="_blank").        */
 const JOTFORM = {
-  prayerFormUrl: 'https://form.jotform.com/000000000000000'
+  prayerFormUrl: 'https://form.jotform.com/262877522696069'
 };
 
 /* ---- Task 4: Google Drive as the media CDN ----------------------

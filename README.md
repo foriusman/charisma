@@ -263,7 +263,7 @@ implemented as far as the platform honestly allows.
 ## 8. Recommended Next Steps
 
 1. Replace placeholder media with the couple's photos/videos.
-2. Set `JOTFORM.prayerFormUrl` to the real form URL (the CTA shows an honest notice until then).
+2. Confirm `JOTFORM.prayerFormUrl` in `js/config.js` points to the couple's active Jotform form.
 3. Fill in real bank details, or switch fully to the online Zainpay flow.
 4. Stand up the Zainpay charge + webhook endpoints, then switch `ZAINPAY.mode` to `live`.
 5. Create the Supabase project, run the SQL in §5, and paste the URL/anon key into `js/config.js`.
