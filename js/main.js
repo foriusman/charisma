@@ -369,6 +369,36 @@
   }
 
   /* ---------------- Portrait film reel ---------------- */
+  function setHeroVideo(items) {
+    var video = $('#hero-video');
+    var source = video && $('source', video);
+    if (!source || !items || !items.length) return;
+
+    var selected = items.slice().sort(function (a, b) {
+      return (a.file_size || Infinity) - (b.file_size || Infinity);
+    })[0];
+    var resolved = (typeof resolveReelVideo === 'function')
+      ? resolveReelVideo(selected) : { url: selected.video };
+    if (!resolved.url) return;
+
+    var fallbackUrl = source.getAttribute('data-fallback') || source.getAttribute('src');
+    source.setAttribute('data-fallback', fallbackUrl);
+    video.addEventListener('error', function () {
+      if (source.getAttribute('src') !== resolved.url) return;
+      source.setAttribute('src', fallbackUrl);
+      video.poster = 'https://drive.google.com/file/d/13Imo51_TDnx_DfaDLQKIKg_szr23V3mN/view?usp=drive_link';
+      video.load();
+      var fallbackPlay = video.play();
+      if (fallbackPlay && fallbackPlay.catch) fallbackPlay.catch(function () {});
+    }, { once: true });
+
+    if (selected.poster) video.poster = selected.poster;
+    source.setAttribute('src', resolved.url);
+    video.load();
+    var playback = video.play();
+    if (playback && playback.catch) playback.catch(function () { /* browser autoplay policy */ });
+  }
+
   function initReel(sourceItems) {
     var track = $('#reel-track');
     var viewport = $('#reel-viewport');
@@ -913,6 +943,7 @@
     var driveReels = (typeof loadDriveReelFolder === 'function')
       ? loadDriveReelFolder() : Promise.resolve(null);
     driveReels.then(function (items) {
+      if (items && items.length) setHeroVideo(items);
       initReel(items && items.length ? items : undefined);
     }, function () {
       initReel();

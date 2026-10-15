@@ -108,7 +108,7 @@ function loadDriveFolder(folderId, mimeType) {
       q: "'" + folderId + "' in parents and mimeType contains '" + mimeType + "' and trashed = false",
       pageSize: '1000',
       orderBy: 'name',
-      fields: 'nextPageToken,files(id,name,mimeType,thumbnailLink)',
+      fields: 'nextPageToken,files(id,name,mimeType,size,thumbnailLink)',
       key: GDRIVE.galleryApiKey
     });
     if (pageToken) params.set('pageToken', pageToken);
@@ -162,6 +162,7 @@ function loadDriveReelFolder() {
         title: title,
         caption: 'Our story in motion',
         video: '',
+        file_size: Number(file.size) || 0,
         poster: file.thumbnailLink || driveImage(file.id, 900)
       };
     });
