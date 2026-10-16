@@ -828,7 +828,7 @@
         b.setAttribute('aria-selected', on ? 'true' : 'false');
       });
 
-      frame.src = build(lat, lng);
+      frame.src = tab.getAttribute('data-map-embed') || build(lat, lng);
       if (title) title.textContent = t;
       if (address) address.textContent = addr;
       if (link) {
