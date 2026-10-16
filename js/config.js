@@ -204,7 +204,7 @@ const ZAINPAY = {
   baseUrl: 'https://api.zainpay.ng',
   /* Backend route that creates the charge and returns { checkoutUrl }.
      Leave blank in demo mode. */
-  chargeEndpoint: '',
+  chargeEndpoint: '/api/zainpay/charge',
   /* Task 6 keep-alive target: the Zainpay webhook/confirm route that
      finalises a payment server-side before a receipt is issued. */
   webhookConfirmPath: '/api/zainpay/confirm'
@@ -246,10 +246,10 @@ function resolveGalleryImage(row) {
 }
 
 function resolveReelVideo(reel) {
-  if (reel && reel.drive_file_id) return { url: driveVideo(reel.drive_file_id), kind: 'drive' };
+  if (reel && reel.drive_file_id) return { url: drivePreview(reel.drive_file_id), kind: 'drive' };
   var drive = (typeof GDRIVE !== 'undefined' && GDRIVE.videoFileIds)
     ? GDRIVE.videoFileIds[reel && reel.id] : null;
-  if (drive) return { url: driveVideo(drive), kind: 'drive' };
+  if (drive) return { url: drivePreview(drive), kind: 'drive' };
   return { url: (reel && reel.video) || '', kind: 'url' };
 }
 

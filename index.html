@@ -508,6 +508,11 @@
       </div>
 
       <div class="field">
+        <label for="pay-phone">Phone number <span class="req">*</span></label>
+        <input type="tel" id="pay-phone" name="phone" required autocomplete="tel" pattern="[+0-9 ()-]{10,20}" placeholder="08012345678">
+      </div>
+
+      <div class="field">
         <label for="pay-amount">Gift amount (NGN) <span class="req">*</span></label>
         <input type="number" id="pay-amount" name="amount" required min="100" step="50" inputmode="numeric" placeholder="10000">
         <div class="amount-chips" id="amount-chips">
@@ -541,9 +546,7 @@
 
     <p class="pay-demo-note">
       <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
-      Zainpay keys are configured in <code>js/config.js</code>. Without a live
-      gateway token this button records a <strong>pending</strong> payment which
-      you can confirm in the admin dashboard.
+      <span id="pay-mode-note">Demo mode is active. No payment will be charged; this only tests the gift form.</span>
     </p>
   </div>
 </div>

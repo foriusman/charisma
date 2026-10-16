@@ -74,8 +74,13 @@
      and returns { checkoutUrl }. A static page must never carry a
      secret key, so we only ever send non-sensitive fields. */
   function startCharge(payload) {
-    var live = window.ZAINPAY && ZAINPAY.mode === 'live' && ZAINPAY.chargeEndpoint;
-    if (!live) return Promise.resolve({ demo: true });
+    if (typeof ZAINPAY === 'undefined' || ZAINPAY.mode === 'demo') return Promise.resolve({ demo: true });
+    if (ZAINPAY.mode !== 'live') {
+      return Promise.reject(new Error('Unsupported Zainpay payment mode.'));
+    }
+    if (!ZAINPAY.chargeEndpoint) {
+      return Promise.reject(new Error('Zainpay live mode requires a server charge endpoint.'));
+    }
 
     return fetch(ZAINPAY.chargeEndpoint, {
       method: 'POST',
@@ -85,11 +90,16 @@
       if (!r.ok) throw new Error('Charge endpoint ' + r.status);
       return r.json();
     }).then(function (data) {
-      if (data && data.checkoutUrl) {
-        window.location.href = data.checkoutUrl;
-        return { redirecting: true };
+      if (!data || typeof data.checkoutUrl !== 'string' || !data.checkoutUrl.trim()) {
+        throw new Error('Charge endpoint did not return a checkout URL.');
       }
-      return { demo: true };
+      var checkoutUrl = new URL(data.checkoutUrl, window.location.href);
+      if (checkoutUrl.protocol !== 'https:' || !/(^|\.)zainpay\.ng$/.test(checkoutUrl.hostname)) {
+        throw new Error('Charge endpoint returned an invalid checkout URL.');
+      }
+      sessionStorage.setItem('charisma-payment', data.token);
+      window.location.assign(checkoutUrl.href);
+      return { redirecting: true };
     });
   }
 
@@ -135,7 +145,7 @@
   function downloadReceipt(rec) {
     if (!rec) return;
     return loadJsPdf().then(function (JsPDF) {
-      var doc = new jsPDF({ unit: 'pt', format: 'a4' });
+      var doc = new JsPDF({ unit: 'pt', format: 'a4' });
       var W = doc.internal.pageSize.getWidth();
       var M = 56;
       var y = 0;
@@ -228,6 +238,11 @@
     var submit = $('#pay-submit');
     var amount = $('#pay-amount');
     var chips = $$('.amount-chip');
+    var modeNote = $('#pay-mode-note');
+
+    if (modeNote && typeof ZAINPAY !== 'undefined' && ZAINPAY.mode === 'live') {
+      modeNote.textContent = 'Your payment will be completed securely on Zainpay. A receipt is issued only after payment is verified.';
+    }
 
     function setStatus(msg, cls) {
       if (!status) return;
@@ -291,7 +306,7 @@
         payer_name: name,
         payer_email: email,
         amount: amt,
-        currency: (window.ZAINPAY && ZAINPAY.currency) || 'NGN',
+        currency: (typeof ZAINPAY !== 'undefined' && ZAINPAY.currency) || 'NGN',
         purpose: purposeEl ? purposeEl.value : 'Wedding Gift',
         note: noteEl ? noteEl.value.trim() : '',
         status: 'pending',
@@ -309,16 +324,18 @@
         email: email,
         name: name,
         reference: reference,
-        currency: record.currency,
-        zainboxCode: (window.ZAINPAY && ZAINPAY.zainboxCode) || ''
+        phone: $('#pay-phone').value.trim(),
+        purpose: record.purpose,
+        note: record.note,
+        currency: record.currency
       })
         .then(function (charge) {
           if (charge && charge.redirecting) return null;
 
           /* Demo / offline confirmation. A live integration flips this to
              'confirmed' from the Zainpay webhook handler instead. */
-          record.status = 'confirmed';
-          record.gateway_reference = 'ZAIN-' + reference;
+          record.status = 'demo';
+          record.gateway_reference = 'DEMO-' + reference;
           return storePayment(record);
         })
         .then(function (saved) {
@@ -343,6 +360,25 @@
         })
         .then(function () { if (submit) submit.disabled = false; });
     });
+
+    if (new URLSearchParams(location.search).has('payment')) {
+      openModal(modal);
+      setStatus('Checking payment with Zainpay...');
+      var token = sessionStorage.getItem('charisma-payment');
+      if (!token) setStatus('Payment session unavailable. Contact us with your Zainpay reference.', 'is-err');
+      else fetch(ZAINPAY.webhookConfirmPath, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: token })
+      }).then(function (r) { if (!r.ok) throw new Error(); return r.json(); })
+        .then(function (result) {
+          if (!result.receipt || result.receipt.status !== 'confirmed') throw new Error();
+          lastReceipt = result.receipt;
+          paintReceipt(lastReceipt);
+          $('#receipt-lead').textContent = 'Your payment has been verified. Thank you for your gift.';
+          closeModal(modal); openModal($('#receipt-modal'));
+          sessionStorage.removeItem('charisma-payment');
+          history.replaceState(null, '', location.pathname + location.hash);
+        }).catch(function () { setStatus('Payment is not yet verified. Refresh to check again; do not pay again if already charged.', 'is-err'); });
+    }
 
     var rClose = $('#receipt-close');
     var rModal = $('#receipt-modal');

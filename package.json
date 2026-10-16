@@ -1,0 +1,10 @@
+{
+  "name": "charisma-2026",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.cjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

@@ -379,13 +379,25 @@
       });
 
       var activeCard = activeVideo.closest('.reel-card');
-      if (activeCard) activeCard.classList.add('is-playing');
+      if (activeCard) {
+        activeCard.classList.add('is-playing');
+        var status = $('.reel-status', activeCard);
+        if (status) status.textContent = '';
+      }
     }, true);
 
     document.addEventListener('pause', function (event) {
       var pausedCard = event.target && event.target.closest
         ? event.target.closest('.reel-card') : null;
       if (pausedCard) pausedCard.classList.remove('is-playing');
+    }, true);
+
+    document.addEventListener('error', function (event) {
+      var failedVideo = event.target;
+      if (!failedVideo || failedVideo.tagName !== 'VIDEO') return;
+      var failedCard = failedVideo.closest('.reel-card');
+      var status = failedCard && $('.reel-status', failedCard);
+      if (status) status.textContent = 'This video could not be loaded. Check your connection and try again.';
     }, true);
   }
 
@@ -414,12 +426,13 @@
       var resolved = (typeof resolveReelVideo === 'function')
         ? resolveReelVideo(r) : { url: r.video, kind: 'url' };
       return '<article class="reel-card" data-index="' + i + '" aria-label="' + esc(r.title) + '">' +
-        '<video class="reel-video" muted loop playsinline preload="none" ' +
-          'poster="' + esc(r.poster) + '" data-src="' + esc(resolved.url) + '" ' +
-          'aria-hidden="true" tabindex="-1"></video>' +
+        (resolved.kind === 'drive'
+          ? '<iframe class="reel-embed" src="' + esc(resolved.url) + '" title="' + esc(r.title) + '" loading="lazy" allow="autoplay; fullscreen" allowfullscreen></iframe>'
+          : '<video class="reel-video" controls loop playsinline preload="metadata" poster="' + esc(r.poster) + '" src="' + esc(resolved.url) + '" aria-label="Video: ' + esc(r.title) + '"></video>') +
         '<span class="reel-scrim" aria-hidden="true"></span>' +
         '<span class="reel-badge">' + esc(r.badge) + '</span>' +
         '<button class="reel-play" type="button" aria-label="Play ' + esc(r.title) + '"><i class="fa-solid fa-play" aria-hidden="true"></i></button>' +
+        '<span class="reel-status" role="status" aria-live="polite"></span>' +
         '<div class="reel-copy">' +
           '<h3>' + esc(r.title) + '</h3>' +
           '<p>' + esc(r.caption) + '</p>' +
@@ -447,8 +460,12 @@
         if (on && play) {
           if (!v.getAttribute('src')) v.setAttribute('src', v.getAttribute('data-src'));
           var p = v.play();
-          if (p && p.catch) p.catch(function () { /* autoplay blocked: poster remains */ });
-          c.classList.add('is-playing');
+          if (p && p.catch) {
+            p.catch(function () {
+              var status = $('.reel-status', c);
+              if (status) status.textContent = 'Playback could not start. Use the video controls to try again.';
+            });
+          }
         } else if (!on) {
           v.pause();
           c.classList.remove('is-playing');
@@ -503,6 +520,7 @@
 
     /* keyboard support */
     viewport.addEventListener('keydown', function (e) {
+      if (e.target.closest('video, iframe, button, a')) return;
       if (e.key === 'ArrowRight') { e.preventDefault(); go(1, true); }
       if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1, true); }
     });
@@ -511,6 +529,7 @@
     /* touch swipe */
     var startX = 0, deltaX = 0, dragging = false;
     viewport.addEventListener('touchstart', function (e) {
+      if (e.target.closest('video, iframe, button, a')) { dragging = false; deltaX = 0; return; }
       startX = e.touches[0].clientX; deltaX = 0; dragging = true;
     }, { passive: true });
     viewport.addEventListener('touchmove', function (e) {
@@ -615,10 +634,10 @@
         var videoSrc = r.video_url || ((typeof driveVideo === 'function') ? driveVideo(r.drive_file_id) : '');
         return '<figure class="masonry-item gallery-video-item reveal" data-tag="' + esc(tag) + '">' +
           '<div class="gallery-video-card">' +
-            '<video class="gallery-video" controls preload="metadata" playsinline poster="' + esc(r.poster || '') + '" aria-label="' + esc(r.title || r.caption || 'Wedding video') + '">' +
+            (r.drive_file_id ? '<iframe class="gallery-video" src="' + esc(drivePreview(r.drive_file_id)) + '" title="' + esc(r.title || 'Wedding video') + '" loading="lazy" allow="autoplay; fullscreen" allowfullscreen></iframe>' : '<video class="gallery-video" controls preload="metadata" playsinline poster="' + esc(r.poster || '') + '" aria-label="' + esc(r.title || r.caption || 'Wedding video') + '">' +
               '<source src="' + esc(videoSrc) + '" type="' + esc(r.mime_type || 'video/mp4') + '">' +
               'Your browser does not support the video tag.' +
-            '</video>' +
+            '</video>') +
             '<figcaption class="gallery-video-caption">' + esc(r.title || r.caption || '') + '</figcaption>' +
           '</div>' +
         '</figure>';

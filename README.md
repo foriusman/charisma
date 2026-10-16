@@ -96,8 +96,9 @@ images/
 
 ### Gifting &amp; payments
 - Zainpay gift modal: name, receipt email, amount (+ quick chips), purpose, message, validation.
-- `demo` mode records and confirms a gift so the whole journey is demonstrable; `live` mode POSTs to a
-  server `chargeEndpoint` and redirects to the returned `checkoutUrl`.
+- `demo` mode exercises the gift form without charging. `live` mode POSTs non-secret payment details
+  to a server `chargeEndpoint` and redirects to its returned `checkoutUrl`; an invalid or missing
+  checkout URL is treated as an error, never as a successful demo payment.
 - Confirmation screen with a **PDF receipt** (jsPDF), plus Print fallback.
 - Gift reference format: `CH26-XXXXXXX`.
 
@@ -237,10 +238,12 @@ implemented as far as the platform honestly allows.
    platform level (restrict the route) — treat this page as "hidden, not protected". Do not put
    sensitive payout details on it.
 2. **Zainpay live charging needs a backend.** A static page must never hold a secret key. `demo` mode
-   is fully wired; going live requires a small server endpoint that creates the charge and returns a
-   `checkoutUrl`, plus a **webhook** handler to flip `status` to `confirmed`. Set
-   `ZAINPAY.mode = 'live'` and `ZAINPAY.chargeEndpoint`. The webhook **cannot** be host
-   Cloudflare/D1 functions from this project.
+   exercises the form without charging; going live requires a server endpoint that creates a Zainpay
+   charge and returns a `checkoutUrl`, plus a **webhook** handler that verifies the gateway event
+   before setting `status` to `confirmed` or issuing a receipt. The Zainbox code and secret keys
+   belong in server-side environment variables, not `js/config.js` or browser requests. Set
+   `ZAINPAY.mode = 'live'` and `ZAINPAY.chargeEndpoint` only after these endpoints are deployed. The
+   webhook **cannot** be hosted by this project's Cloudflare/D1 functions.
 3. **Supabase payments are unauthenticated by design.** With RLS open to `anon`, any visitor could
    in principle write. For production, insert through a server endpoint that holds the service key.
 4. **Google Drive is a fragile CDN.** Drive throttles hot-linking and can serve an
@@ -349,3 +352,47 @@ configuring the environment variables and backend endpoints that power the gift,
 To make the site live, use the **Publish** tab (or an explicit Hosted Deploy). Note that a deployed
 site has its **own** database: rows added in the editor do **not** appear on the live site until you
 copy them across.
+
+### Zainpay checkout integration (October 2026)
+
+The checkout now includes Node 22+ serverless handlers at `api/zainpay/charge.js`
+and `api/zainpay/confirm.js`, compatible with Vercel's Node functions. Static-only
+hosting must proxy these same-origin routes to a Node function deployment. Do not
+publish `.env` or `server/` as static assets. No npm runtime dependencies are needed.
+
+1. Set the hosting environment variables in `.env.example`: `ZAINPAY_PUBLIC_KEY`,
+   `ZAINPAY_ZAINBOX_CODE`, `ZAINPAY_ENV=sandbox`, `SITE_URL` (your HTTPS origin), and
+   `PAYMENT_SIGNING_SECRET` (a random secret of at least 32 characters).
+2. Deploy the API routes alongside the frontend. Set `ZAINPAY.mode` in
+   `js/config.js` to `live` to enable hosted checkout (the backend environment
+   still controls sandbox versus real payments). Keep it `demo` until configured.
+3. Complete a sandbox checkout, return, cancelled checkout, and failed checkout.
+   Check the verification amount matches the original amount in naira. Zainpay's
+   deposit verification documentation also describes net settlement amounts;
+   the handler deliberately rejects mismatches rather than issuing an incorrect
+   receipt. Confirm your account's units/fee treatment before enabling real payments.
+4. Switch `ZAINPAY_ENV` to `live` with the corresponding account key and Zainbox.
+
+Credentials stay on the server. Checkout references are server-generated. Signed
+sessions expire after seven days; the browser retains the session in sessionStorage
+for return verification. Return URL parameters never prove payment. Verification
+checks the gateway's reference, Zainbox, deposit type, amount and payment details.
+Refresh the return page to retry pending verification. Keep the same browser tab.
+
+This implementation provides hosted checkout and verified downloadable receipts.
+It does not yet persist live payments to the admin dashboard or process background
+webhooks; use the Zainpay dashboard as the payment ledger. The confirm route is a
+browser-triggered verification endpoint, not a webhook receiver. Demo receipts are
+labelled DEMO and are not payment proof. Do not use the existing anonymous payment
+table as an authoritative live ledger.
+
+Reference: https://github.com/zainpay/zainpay-nodejs-sdk (official SDK endpoint
+mapping and payloads; implementation uses native fetch). Run `npm test` for the
+mocked gateway and media resolver regression checks. Real account checkout remains
+pending credentials and sandbox validation.
+
+Drive videos now use Google's `/file/d/ID/preview` player in both reel and gallery;
+files must be shared for viewer access and finished processing in Drive. Direct
+video URLs use native controls with the source attached immediately. Embedded Drive
+players manage their own playback; the page cannot enforce exclusive playback
+inside cross-origin iframes.
