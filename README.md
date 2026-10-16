@@ -56,13 +56,15 @@ css/
 js/
   config.js                    Brand data, wedding facts, integrations, fallbacks
   main.js                      Public interactions (nav, reel, gallery, map, countdown)
-  site-payments.js             Zainpay gifting, PDF receipts, Jotform CTA, keep-alive
+   site-payments.js             Zainpay gifts, transfer receipts, PDF receipts, keep-alive
   admin.js                     Dashboard: read/filter/confirm/CSV/receipts
   download.js                  Client-side zip builder
 images/
   brand-colors.jpg             Brand palette reference
   brand-typography.jpg         Brand type reference
 .tables/schema.json            D1 / preview table schema
+.tables/supabase-receipts.sql  Supabase payments table, private bucket and RLS policies
+api/config.js                  Runtime delivery of public Supabase settings
 .github/workflows/keepalive.yml Scheduled ping (Task 6)
 ```
 
@@ -175,42 +177,23 @@ service-account credential or other secret in this file.
 
 **Storage services**
 1. **Genspark tables API / D1** — story, gallery, gifts, prayers, and payment fallback.
-2. **Supabase** (optional) — `wedding_payments`, used by the dashboard when `SUPABASE.url` +
-   `SUPABASE.anonKey` are set.
+2. **Supabase** — `wedding_payments` and the private `payment-receipts` bucket for bank-transfer proof.
 3. **Google Drive** (optional) — media CDN, see the caveat in §7.
 
-### Supabase setup (optional)
+The Supabase `wedding_payments` table additionally stores `receipt_path` for bank-transfer submissions; the D1/preview `payments` schema does not.
 
-```sql
-create table if not exists public.wedding_payments (
-  id uuid primary key default gen_random_uuid(),
-  reference text unique not null,
-  payer_name text,
-  payer_email text,
-  amount numeric,
-  currency text default 'NGN',
-  purpose text,
-  note text,
-  status text default 'pending',
-  gateway text default 'Zainpay',
-  gateway_reference text,
-  paid_at timestamptz,
-  created_at timestamptz default now()
-);
+### Supabase receipts setup
 
-alter table public.wedding_payments enable row level security;
+1. Create a Supabase project and open **SQL Editor → New query**.
+2. Run the complete script in [.tables/supabase-receipts.sql](.tables/supabase-receipts.sql). It creates or updates `wedding_payments`, adds the `receipt_path` field, creates the private `payment-receipts` bucket with an 8 MB limit and allowed image/PDF types, and installs the required RLS policies. The script can be run again safely.
+3. In the Supabase project settings, copy the **Project URL** and **anon/public key**. Do not use the `service_role` key in browser code or expose it as a `SUPABASE_*` public variable.
+4. Set `SUPABASE_URL` and `SUPABASE_ANON_KEY` in the hosting environment. For local development, put them in `.env.local` at the project root. `api/config.js` exposes only these two public values to the browser at runtime.
+5. Redeploy/restart the local server. The bank-transfer form in the Donation section uploads a private receipt object, then adds a `pending` row to `wedding_payments`. Donors may submit JPG, PNG, WebP, or PDF files up to 8 MB.
+6. Review the pending row in Supabase **Table Editor → wedding_payments**. Use its `receipt_path` to locate the private object in **Storage → payment-receipts**, verify the transfer in your bank account, then mark the row confirmed from the admin dashboard. An uploaded receipt alone is not proof of settlement and never auto-confirms a payment.
 
--- Anonymous visitors may insert a gift…
-create policy "anon can insert payments"
-  on public.wedding_payments for insert to anon with check (true);
+The bucket is private and has no anonymous read, update, or delete policy. The public upload policy only permits new objects under a generated `CH26-...` reference folder. Keep the project URL and anon key public-safe by relying on RLS; never place a service-role key in `.env.local` variables delivered to the frontend.
 
--- …and the dashboard may read/update (tighten this for real use).
-create policy "anon can read payments"
-  on public.wedding_payments for select to anon using (true);
-
-create policy "anon can update payments"
-  on public.wedding_payments for update to anon using (true);
-```
+**Security limitation:** the existing admin page uses a client-side passcode and anonymous Supabase read/update access; it is not secure authentication. Protect `/admin.html` at the hosting layer and use Supabase Auth plus server-side authorization before relying on the dashboard for sensitive payment records. Public table reads expose payer metadata. These policies support the current simple wedding workflow, not a high-risk payments ledger.
 
 ---
 
@@ -258,8 +241,7 @@ implemented as far as the platform honestly allows.
 7. **Prayers wall is read-only on-site.** New prayers are collected by Jotform (Task 8), so the wall
    shows whatever is already in the `prayers` table. To surface Jotform submissions, sync them into
    that table.
-8. **Bank details in the Gifting section are placeholders** — replace `[Your Bank Name]` and
-   `[0000000000]` before sharing.
+8. Confirm the displayed bank account details with the account holder before sharing the site.
 
 ---
 
@@ -269,7 +251,7 @@ implemented as far as the platform honestly allows.
 2. Confirm `JOTFORM.prayerFormUrl` in `js/config.js` points to the couple's active Jotform form.
 3. Fill in real bank details, or switch fully to the online Zainpay flow.
 4. Stand up the Zainpay charge + webhook endpoints, then switch `ZAINPAY.mode` to `live`.
-5. Create the Supabase project, run the SQL in §5, and paste the URL/anon key into `js/config.js`.
+5. Create the Supabase project, run the SQL in §5, and configure `SUPABASE_URL` plus `SUPABASE_ANON_KEY` in the host environment.
 6. Restrict `/admin.html` at the platform level rather than relying on the passcode.
 7. Add the GitHub remote and set `SITE_URL` so the keep-alive runs server-side.
 8. Optionally add RSVP/guest-seating and a live photo wall.
@@ -278,65 +260,28 @@ implemented as far as the platform honestly allows.
 
 ## 9. Local Preview & Deployment Guide
 
-This project is a static website, so the recommended way to test it locally is to serve the folder over
-an HTTP server instead of opening the HTML files directly in a browser. Opening `index.html` from the
-filesystem can break relative fetches used by the gallery, tables API, and gift flow, especially on
-`/tables/*` and other browser-dependent requests.
+Use Node.js 22 or newer (npm is included with Node). The site has no build step or installed runtime packages, but it uses Vercel-style `/api/*` functions; a plain static server such as `python -m http.server` will not run those routes.
 
-### Local server test guide
+From the project root, install the lockfile dependencies and run the automated checks:
 
-From the project root, run one of the following:
-
-```bash
-# Python (works on most systems)
-python -m http.server 8000
-
-# Windows PowerShell alternative
-py -m http.server 8000
-
-# Node.js option (if you already use npm / npx)
-npx serve . -l 8000
+```powershell
+npm ci
+npm test
 ```
 
-Then open these URLs in a browser:
+Start the local site and serverless routes with the Vercel CLI:
 
-- `http://localhost:8000/` — wedding landing page
-- `http://localhost:8000/admin.html` — admin dashboard
-- `http://localhost:8000/download.html` — zip export page
+```powershell
+npx --yes vercel dev --listen 3000
+```
 
-Recommended smoke test:
+The first run may ask you to authenticate or link a Vercel project. Open `http://localhost:3000/`, `http://localhost:3000/admin.html`, and `http://localhost:3000/download.html`. To load Supabase locally, copy `.env.example` to `.env.local` and set `SUPABASE_URL` and `SUPABASE_ANON_KEY` there after running the SQL setup in §5. Never put a service-role key in these browser-exposed settings.
 
-1. Confirm the landing page loads without console errors.
-2. Check the countdown, gallery, reels, and map sections render.
-3. Open the gift modal and complete a demo donation to ensure the confirmation flow works.
-4. Visit the admin page and verify filtering/searching still work against the configured store.
-5. Open the download page and confirm the ZIP build runs correctly.
-
-> If anything fails while testing, first confirm the browser is loading the site via `http://localhost:8000` rather than a direct file path.
+With `ZAINPAY.mode` left at its default `demo`, submit a test gift: no charge is made, and on localhost the demo record is saved in that browser's local storage. Open the admin page in the same browser and use its existing demo passcode to inspect or confirm the local record. This does not call Zainpay or create a real payment. Receipt uploads require Supabase configuration and the SQL/bucket policies to be applied.
 
 ### Deployment guide
 
-This project does not require a build step or a Node app server. It can be deployed as a static site to any
-platform that serves HTML/CSS/JS from the project root.
-
-Recommended deployment checklist:
-
-1. Push the repository to GitHub or the target hosting provider.
-2. Select a static host such as Cloudflare Pages, Netlify, Vercel, GitHub Pages, or the platform's
-   Hosted Deploy option.
-3. Set the publish directory to the project root and keep `index.html` as the default entry page.
-4. Make sure `admin.html` and `download.html` are published alongside the main page.
-5. Configure the integration values in `js/config.js` before going live:
-   - `JOTFORM.prayerFormUrl`
-   - `ZAINPAY.chargeEndpoint` for live payments
-   - `SUPABASE.url` and `SUPABASE.anonKey` if using Supabase
-   - `KEEPALIVE` settings and the GitHub `SITE_URL` variable if you use the workflow ping.
-6. Verify the deployed site loads and that the database-backed features point at the live environment rather
-   than a local preview database.
-
-If you are using the platform's Hosted Deploy flow, publish the site from the project root and then test the
-live URL before sharing it. Because this is a static site, deployment is straightforward; the main work is
-configuring the environment variables and backend endpoints that power the gift, payment, and admin flows.
+Deploy the project root to Vercel so `api/config.js` and `api/zainpay/*` run as Node serverless functions; keep the HTML pages at the root. Add the required variables from `.env.example` in the Vercel project settings. `SUPABASE_URL` and `SUPABASE_ANON_KEY` are public client settings; Zainpay keys and `PAYMENT_SIGNING_SECRET` are server-only secrets. Static-only hosting is not sufficient unless it proxies these API routes to a compatible Node backend. Verify the deployed site, Supabase bucket upload, and Zainpay sandbox flow before enabling live payments.
 
 ---
 

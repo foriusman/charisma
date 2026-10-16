@@ -240,6 +240,35 @@
           <li><em>Account Number: 5334194558</em></li>
           <li><em>Account Name: Usman Fori</em></li>
         </ul>
+        <section class="receipt-upload" aria-labelledby="receipt-upload-title">
+          <h3 id="receipt-upload-title">Already donated by bank transfer?</h3>
+          <p>Upload your transfer receipt. It will be reviewed before your donation is confirmed.</p>
+          <form id="receipt-upload-form" class="receipt-upload-form" novalidate>
+            <div class="field">
+              <label for="transfer-name">Your name <span class="req">*</span></label>
+              <input id="transfer-name" name="payer_name" type="text" required maxlength="80" autocomplete="name">
+            </div>
+            <div class="field">
+              <label for="transfer-email">Email <span class="req">*</span></label>
+              <input id="transfer-email" name="payer_email" type="email" required maxlength="254" autocomplete="email">
+            </div>
+            <div class="field">
+              <label for="transfer-amount">Amount transferred (NGN) <span class="req">*</span></label>
+              <input id="transfer-amount" name="amount" type="number" required min="100" max="10000000" step="0.01" inputmode="decimal">
+            </div>
+            <div class="field">
+              <label for="transfer-reference">Bank transaction reference (optional)</label>
+              <input id="transfer-reference" name="transaction_reference" type="text" maxlength="100">
+            </div>
+            <div class="field">
+              <label for="transfer-file">Transfer receipt image or PDF <span class="req">*</span></label>
+              <input id="transfer-file" name="receipt" type="file" required accept="image/jpeg,image/png,image/webp,application/pdf">
+              <small>JPG, PNG, WebP or PDF, up to 8 MB.</small>
+            </div>
+            <button class="btn btn-solid" id="receipt-upload-submit" type="submit">Submit receipt</button>
+            <p class="form-status" id="receipt-upload-status" role="status" aria-live="polite"></p>
+          </form>
+        </section>
       </header>
       <!-- <div class="card-grid" id="donation-list" aria-busy="true">
         <ul>
@@ -586,6 +615,7 @@
   <button class="lightbox-nav lightbox-next" id="lightbox-next" type="button" aria-label="Next image"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
 </div>
 
+<script src="/api/config"></script>
 <script src="js/config.js"></script>
 <script src="js/main.js"></script>
 <script src="js/site-payments.js"></script>

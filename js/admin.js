@@ -14,6 +14,7 @@
   var ADMIN_PASSCODE = 'charisma2026';
   var SESSION_KEY = 'charisma-admin-unlocked';
   var CACHE_KEY = 'charisma-admin-payments';
+  var LOCAL_PAYMENTS_KEY = 'charisma-local-payments';
 
   var state = { rows: [], query: '', status: 'all', source: 'tables' };
 
@@ -45,6 +46,15 @@
     return !!(window.SUPABASE && SUPABASE.url && SUPABASE.anonKey);
   }
 
+  function isLocalPreview() {
+    return /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname);
+  }
+
+  function readLocalPayments() {
+    try { return JSON.parse(localStorage.getItem(LOCAL_PAYMENTS_KEY) || '[]'); }
+    catch (e) { return []; }
+  }
+
   /* ---------------- Data loading ---------------- */
   function loadFromSupabase() {
     var base = SUPABASE.url.replace(/\/$/, '');
@@ -59,17 +69,22 @@
   }
 
   function loadFromTables() {
+    if (isLocalPreview() && readLocalPayments().length) return Promise.resolve(readLocalPayments());
     return fetch('tables/payments?page=1&limit=500', { headers: { Accept: 'application/json' } })
       .then(function (r) {
         if (!r.ok) throw new Error('Tables API ' + r.status);
         return r.json();
       })
-      .then(function (j) { return (j && j.data) ? j.data : []; });
+      .then(function (j) { return (j && j.data) ? j.data : []; })
+      .catch(function (error) {
+        if (!isLocalPreview()) throw error;
+        return readLocalPayments();
+      });
   }
 
   function loadRows() {
     var loader = supabaseReady() ? loadFromSupabase : loadFromTables;
-    state.source = supabaseReady() ? 'supabase' : 'tables';
+    state.source = supabaseReady() ? 'supabase' : (isLocalPreview() ? 'local demo' : 'tables');
 
     var label = $('#store-label');
     if (label) label.textContent = 'Store: ' + (state.source === 'supabase' ? 'Supabase' : 'Project tables API');
@@ -78,8 +93,10 @@
     if (note) {
       note.innerHTML = state.source === 'supabase'
         ? 'Reading live payment records from Supabase (<code>' + esc(SUPABASE.paymentsTable) + '</code>).'
-        : 'Supabase is not configured, so records are read from this project&rsquo;s own <code>payments</code> table. ' +
-          'Add <code>SUPABASE.url</code> and <code>SUPABASE.anonKey</code> in <code>js/config.js</code> to switch.';
+        : state.source === 'local demo'
+          ? 'Local preview records are stored in this browser only; they are not real payments.'
+          : 'Supabase is not configured, so records are read from this project&rsquo;s own <code>payments</code> table. ' +
+          'Set <code>SUPABASE_URL</code> and <code>SUPABASE_ANON_KEY</code> in the hosting environment to switch.';
     }
 
     return loader()
@@ -267,6 +284,14 @@
         },
         body: JSON.stringify({ status: status })
       }).then(function (r) { if (!r.ok) throw new Error('Supabase ' + r.status); });
+    }
+
+    if (isLocalPreview()) {
+      var localRows = readLocalPayments().map(function (row) {
+        return row.reference === record.reference ? Object.assign({}, row, { status: status }) : row;
+      });
+      localStorage.setItem(LOCAL_PAYMENTS_KEY, JSON.stringify(localRows));
+      return Promise.resolve();
     }
 
     var id = record.id || record.reference;

@@ -219,9 +219,10 @@ const ZAINPAY = {
 
    Table SQL (run once in the Supabase SQL editor) is in README.md.  */
 const SUPABASE = {
-  url: '',            // https://xxxxxxxxxxxx.supabase.co
-  anonKey: '',        // public anon key (safe for the browser with RLS on)
-  paymentsTable: 'wedding_payments'
+  url: (typeof window !== 'undefined' && window.CHARISMA_CONFIG && window.CHARISMA_CONFIG.supabaseUrl) || '',
+  anonKey: (typeof window !== 'undefined' && window.CHARISMA_CONFIG && window.CHARISMA_CONFIG.supabaseAnonKey) || '',
+  paymentsTable: 'wedding_payments',
+  receiptsBucket: 'payment-receipts'
 };
 
 /* ---- Task 6: keep-alive / uptime ping ---------------------------

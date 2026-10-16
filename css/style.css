@@ -926,6 +926,27 @@ iframe { max-width: 100%; }
 .pay-cta .btn-solid { background: var(--cream); color: var(--brown-deep); flex: 0 0 auto; }
 .pay-cta .btn-solid:hover { background: var(--white); }
 
+.receipt-upload {
+  max-width: 42rem;
+  margin: 2rem auto 0;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--line-strong);
+}
+.receipt-upload h3 { font-size: 1.15rem; margin-bottom: 0.35rem; }
+.receipt-upload > p { color: var(--ink-soft); font-size: 0.9rem; margin-bottom: 1.2rem; }
+.receipt-upload-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.8rem 1rem; }
+.receipt-upload-form .field { min-width: 0; }
+.receipt-upload-form .field input { width: 100%; }
+.receipt-upload-form .field:last-of-type,
+.receipt-upload-form .form-status { grid-column: 1 / -1; }
+.receipt-upload-form small { display: block; margin-top: 0.35rem; color: var(--ink-mute); font-size: 0.76rem; }
+.receipt-upload-form .form-status { min-height: 1.2em; margin: 0; }
+@media (max-width: 560px) {
+  .receipt-upload-form { grid-template-columns: minmax(0, 1fr); }
+  .receipt-upload-form .field:last-of-type,
+  .receipt-upload-form .form-status { grid-column: auto; }
+}
+
 .modal {
   position: fixed; inset: 0; z-index: 160;
   background: rgba(11,10,8,0.72); backdrop-filter: blur(5px);

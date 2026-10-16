@@ -41,6 +41,24 @@
     return !!(window.SUPABASE && SUPABASE.url && SUPABASE.anonKey);
   }
 
+  var LOCAL_PAYMENTS_KEY = 'charisma-local-payments';
+
+  function isLocalPreview() {
+    return /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname);
+  }
+
+  function readLocalPayments() {
+    try { return JSON.parse(localStorage.getItem(LOCAL_PAYMENTS_KEY) || '[]'); }
+    catch (e) { return []; }
+  }
+
+  function storeLocalPayment(record) {
+    var records = readLocalPayments().filter(function (item) { return item.reference !== record.reference; });
+    records.unshift(record);
+    localStorage.setItem(LOCAL_PAYMENTS_KEY, JSON.stringify(records));
+    return Promise.resolve([record]);
+  }
+
   function storePayment(record) {
     if (supabaseReady()) {
       var base = SUPABASE.url.replace(/\/$/, '');
@@ -66,6 +84,98 @@
     }).then(function (r) {
       if (!r.ok) throw new Error('Tables API ' + r.status);
       return r.json();
+    }).catch(function (error) {
+      if (!isLocalPreview()) throw error;
+      return storeLocalPayment(record);
+    });
+  }
+
+  function uploadTransferReceipt(record, file) {
+    var base = SUPABASE.url.replace(/\/$/, '');
+    var bucket = SUPABASE.receiptsBucket || 'payment-receipts';
+    var extension = file.name.split('.').pop().toLowerCase().replace(/[^a-z0-9]/g, '');
+    var path = record.reference + '/' + crypto.randomUUID() + '.' + extension;
+    var encodedPath = path.split('/').map(encodeURIComponent).join('/');
+
+    return fetch(base + '/storage/v1/object/' + encodeURIComponent(bucket) + '/' + encodedPath, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE.anonKey,
+        Authorization: 'Bearer ' + SUPABASE.anonKey,
+        'Content-Type': file.type,
+        'x-upsert': 'false'
+      },
+      body: file
+    }).then(function (response) {
+      if (!response.ok) throw new Error('Storage upload ' + response.status);
+      return fetch(base + '/rest/v1/' + SUPABASE.paymentsTable, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: SUPABASE.anonKey,
+          Authorization: 'Bearer ' + SUPABASE.anonKey,
+          Prefer: 'return=minimal'
+        },
+        body: JSON.stringify(Object.assign({}, record, { receipt_path: path }))
+      });
+    }).then(function (response) {
+      if (!response.ok) throw new Error('Supabase payment record ' + response.status);
+    });
+  }
+
+  function initReceiptUpload() {
+    var form = $('#receipt-upload-form');
+    if (!form) return;
+    var status = $('#receipt-upload-status');
+    var submit = $('#receipt-upload-submit');
+
+    function setStatus(message, isError) {
+      status.textContent = message;
+      status.classList.toggle('is-err', !!isError);
+      status.classList.toggle('is-ok', !!message && !isError);
+    }
+
+    form.addEventListener('submit', function (event) {
+      event.preventDefault();
+      var name = $('#transfer-name').value.trim();
+      var email = $('#transfer-email').value.trim();
+      var amount = Number($('#transfer-amount').value);
+      var referenceNote = $('#transfer-reference').value.trim();
+      var file = $('#transfer-file').files[0];
+      var allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+
+      if (!supabaseReady()) return setStatus('Receipt uploads are not configured yet. Please contact the couple.', true);
+      if (!name || name.length > 80) return setStatus('Enter your name (up to 80 characters).', true);
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) || email.length > 254) return setStatus('Enter a valid email address.', true);
+      if (!Number.isFinite(amount) || amount < 100 || amount > 10000000 || Math.round(amount * 100) !== amount * 100) {
+        return setStatus('Enter an amount between ₦100 and ₦10,000,000, with up to two decimal places.', true);
+      }
+      if (!file || allowedTypes.indexOf(file.type) === -1) return setStatus('Choose a JPG, PNG, WebP or PDF receipt.', true);
+      if (file.size > 8 * 1024 * 1024) return setStatus('The receipt file must be 8 MB or smaller.', true);
+
+      var record = {
+        reference: makeReference(),
+        payer_name: name,
+        payer_email: email,
+        amount: amount,
+        currency: 'NGN',
+        purpose: 'Wedding Donation',
+        note: referenceNote,
+        status: 'pending',
+        gateway: 'Bank Transfer',
+        gateway_reference: '',
+        paid_at: null,
+        created_at: nowIso()
+      };
+
+      setStatus('Uploading receipt securely…', false);
+      submit.disabled = true;
+      uploadTransferReceipt(record, file).then(function () {
+        form.reset();
+        setStatus('Receipt submitted for review. Your reference is ' + record.reference + '.', false);
+      }).catch(function () {
+        setStatus('We could not submit the receipt. Check your connection and try again.', true);
+      }).then(function () { submit.disabled = false; });
     });
   }
 
@@ -301,7 +411,6 @@
 
       var reference = makeReference();
       var record = {
-        id: reference,
         reference: reference,
         payer_name: name,
         payer_email: email,
@@ -480,6 +589,7 @@
   function boot() {
     initJotform();
     initPayFlow();
+    initReceiptUpload();
     initKeepAlive();
   }
 
