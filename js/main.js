@@ -47,6 +47,7 @@
 
   function getRows(name, opts) {
     opts = opts || {};
+    if (window.CHARISMA_CONFIG) return Promise.resolve(fallbackFor(name));
     var qs = '?page=1&limit=' + (opts.limit || 100) + (opts.sort ? '&sort=' + encodeURIComponent(opts.sort) : '');
     return fetch(API_BASE + name + qs, { headers: { Accept: 'application/json' } })
       .then(function (r) {

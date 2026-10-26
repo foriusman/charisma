@@ -67,7 +67,6 @@
         headers: {
           'Content-Type': 'application/json',
           apikey: SUPABASE.anonKey,
-          Authorization: 'Bearer ' + SUPABASE.anonKey,
           Prefer: 'return=representation'
         },
         body: JSON.stringify(record)
@@ -77,17 +76,8 @@
       });
     }
 
-    return fetch('tables/payments', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify(record)
-    }).then(function (r) {
-      if (!r.ok) throw new Error('Tables API ' + r.status);
-      return r.json();
-    }).catch(function (error) {
-      if (!isLocalPreview()) throw error;
-      return storeLocalPayment(record);
-    });
+    if (isLocalPreview()) return storeLocalPayment(record);
+    return Promise.reject(new Error('Payment storage is not configured.'));
   }
 
   function uploadTransferReceipt(record, file) {
@@ -101,7 +91,6 @@
       method: 'POST',
       headers: {
         apikey: SUPABASE.anonKey,
-        Authorization: 'Bearer ' + SUPABASE.anonKey,
         'Content-Type': file.type,
         'x-upsert': 'false'
       },
@@ -113,7 +102,6 @@
         headers: {
           'Content-Type': 'application/json',
           apikey: SUPABASE.anonKey,
-          Authorization: 'Bearer ' + SUPABASE.anonKey,
           Prefer: 'return=minimal'
         },
         body: JSON.stringify(Object.assign({}, record, { receipt_path: path }))
@@ -185,7 +173,7 @@
      secret key, so we only ever send non-sensitive fields. */
   function startCharge(payload) {
     if (typeof ZAINPAY === 'undefined' || ZAINPAY.mode === 'demo') return Promise.resolve({ demo: true });
-    if (ZAINPAY.mode !== 'live') {
+    if (ZAINPAY.mode !== 'live' && ZAINPAY.mode !== 'sandbox') {
       return Promise.reject(new Error('Unsupported Zainpay payment mode.'));
     }
     if (!ZAINPAY.chargeEndpoint) {
@@ -350,7 +338,7 @@
     var chips = $$('.amount-chip');
     var modeNote = $('#pay-mode-note');
 
-    if (modeNote && typeof ZAINPAY !== 'undefined' && ZAINPAY.mode === 'live') {
+    if (modeNote && typeof ZAINPAY !== 'undefined' && ZAINPAY.mode !== 'demo') {
       modeNote.textContent = 'Your payment will be completed securely on Zainpay. A receipt is issued only after payment is verified.';
     }
 
@@ -387,11 +375,13 @@
 
       var nameEl = $('#pay-name');
       var emailEl = $('#pay-email');
+      var phoneEl = $('#pay-phone');
       var purposeEl = $('#pay-purpose');
       var noteEl = $('#pay-note');
 
       var name = nameEl ? nameEl.value.trim() : '';
       var email = emailEl ? emailEl.value.trim() : '';
+      var phone = phoneEl ? phoneEl.value.trim() : '';
       var amt = amount ? Number(amount.value) : 0;
 
       [nameEl, emailEl, amount].forEach(function (el) { if (el) el.removeAttribute('aria-invalid'); });
@@ -403,6 +393,10 @@
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
         if (emailEl) { emailEl.setAttribute('aria-invalid', 'true'); emailEl.focus(); }
         return setStatus('Please enter a valid email for your receipt.', 'is-err');
+      }
+      if (!/^\+?[0-9 ()-]{10,20}$/.test(phone)) {
+        if (phoneEl) { phoneEl.setAttribute('aria-invalid', 'true'); phoneEl.focus(); }
+        return setStatus('Please enter a valid phone number.', 'is-err');
       }
       if (!amt || amt < 100) {
         if (amount) { amount.setAttribute('aria-invalid', 'true'); amount.focus(); }
@@ -433,7 +427,7 @@
         email: email,
         name: name,
         reference: reference,
-        phone: $('#pay-phone').value.trim(),
+        phone: phone,
         purpose: record.purpose,
         note: record.note,
         currency: record.currency

@@ -61,7 +61,7 @@
     var url = base + '/rest/v1/' + SUPABASE.paymentsTable +
       '?select=*&order=created_at.desc&limit=500';
     return fetch(url, {
-      headers: { apikey: SUPABASE.anonKey, Authorization: 'Bearer ' + SUPABASE.anonKey }
+      headers: { apikey: SUPABASE.anonKey }
     }).then(function (r) {
       if (!r.ok) throw new Error('Supabase ' + r.status);
       return r.json();
@@ -70,6 +70,7 @@
 
   function loadFromTables() {
     if (isLocalPreview() && readLocalPayments().length) return Promise.resolve(readLocalPayments());
+    if (window.CHARISMA_CONFIG) return Promise.resolve([]);
     return fetch('tables/payments?page=1&limit=500', { headers: { Accept: 'application/json' } })
       .then(function (r) {
         if (!r.ok) throw new Error('Tables API ' + r.status);
@@ -84,10 +85,10 @@
 
   function loadRows() {
     var loader = supabaseReady() ? loadFromSupabase : loadFromTables;
-    state.source = supabaseReady() ? 'supabase' : (isLocalPreview() ? 'local demo' : 'tables');
+    state.source = supabaseReady() ? 'supabase' : (isLocalPreview() ? 'local demo' : 'unconfigured');
 
     var label = $('#store-label');
-    if (label) label.textContent = 'Store: ' + (state.source === 'supabase' ? 'Supabase' : 'Project tables API');
+    if (label) label.textContent = 'Store: ' + (state.source === 'supabase' ? 'Supabase' : state.source === 'local demo' ? 'Local demo' : 'not configured');
 
     var note = $('#store-note');
     if (note) {
@@ -95,8 +96,7 @@
         ? 'Reading live payment records from Supabase (<code>' + esc(SUPABASE.paymentsTable) + '</code>).'
         : state.source === 'local demo'
           ? 'Local preview records are stored in this browser only; they are not real payments.'
-          : 'Supabase is not configured, so records are read from this project&rsquo;s own <code>payments</code> table. ' +
-          'Set <code>SUPABASE_URL</code> and <code>SUPABASE_ANON_KEY</code> in the hosting environment to switch.';
+          : 'Payment storage is not configured. Set <code>SUPABASE_URL</code> and <code>SUPABASE_ANON_KEY</code> in the hosting environment.';
     }
 
     return loader()
@@ -279,8 +279,7 @@
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          apikey: SUPABASE.anonKey,
-          Authorization: 'Bearer ' + SUPABASE.anonKey
+          apikey: SUPABASE.anonKey
         },
         body: JSON.stringify({ status: status })
       }).then(function (r) { if (!r.ok) throw new Error('Supabase ' + r.status); });
@@ -294,6 +293,7 @@
       return Promise.resolve();
     }
 
+    if (!isLocalPreview()) return Promise.reject(new Error('Payment storage is not configured.'));
     var id = record.id || record.reference;
     return fetch('tables/payments/' + encodeURIComponent(id), {
       method: 'PATCH',

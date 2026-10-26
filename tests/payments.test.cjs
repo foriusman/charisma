@@ -7,6 +7,7 @@ async function started() { return charge(input, env, async () => ({ code: '00', 
 test('checkout sends naira and a server-generated reference', async () => {
   const result = await charge(input, env, async (service, { data }) => {
     assert.equal(service, 'INITIALIZE_PAYMENT'); assert.equal(data.amount, '5000.00');
+    assert.deepEqual(data.paymentChannels, ['card', 'bank_transfer']); assert.equal(data.currencyCode, 'NGN');
     assert.match(data.txnRef, /^CH26-/); assert.equal(data.callBackUrl, 'https://wedding.example/?payment=return');
     return { code: '00', data: 'https://dev.zainpay.ng/checkout' };
   });
@@ -29,11 +30,18 @@ test('tampered tokens never reach verification', async () => {
 });
 test('only matching verified deposits produce receipts; retries are stable', async () => {
   const { token } = await started(); const order = unpack(token, env.PAYMENT_SIGNING_SECRET);
-  const data = { amount: { amount: 5000 }, txnRef: order.reference, zainboxCode: 'box', txnType: 'deposit', paymentRef: 'gateway-ref', paymentDate: '2026-10-16T10:00:00Z' };
-  const verified = () => confirm({ token }, env, async () => ({ code: '00', data }));
+  const data = { depositedAmount: 500000, txnRef: order.reference, zainboxCode: 'box', txnType: 'deposit', paymentRef: 'gateway-ref', txnDate: '2026-10-16T10:00:00Z' };
+  const saved = [];
+  const verified = () => confirm({ token }, env, async (service, { params }) => {
+    assert.equal(service, 'GET_CARD_PAYMENT_STATUS'); assert.equal(params, order.reference);
+    return { code: '00', data };
+  }, async (receipt) => { saved.push(receipt); });
   assert.equal((await verified()).receipt.status, 'confirmed');
   assert.deepEqual(await verified(), await verified());
-  for (const change of [{ amount: { amount: 1 } }, { txnRef: 'other' }, { zainboxCode: 'other' }, { txnType: 'transfer' }, { paymentRef: '' }]) {
+  assert.equal(saved.length, 3);
+  assert.equal(saved[0].gateway_reference, 'gateway-ref');
+  assert.equal(saved[0].paid_at, data.txnDate);
+  for (const change of [{ depositedAmount: 1 }, { txnRef: 'other' }, { zainboxCode: 'other' }, { txnType: 'transfer' }, { paymentRef: '' }]) {
     await assert.rejects(confirm({ token }, env, async () => ({ code: '00', data: { ...data, ...change } })));
   }
   await assert.rejects(confirm({ token }, env, async () => ({ code: '04' })));

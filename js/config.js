@@ -196,7 +196,7 @@ function drivePreview(value) {
    server-side charge endpoint (see README) — a static page must never
    hold a secret key. `chargeEndpoint` is that endpoint's URL.       */
 const ZAINPAY = {
-  mode: 'demo',                     // 'demo' | 'live'
+  mode: (typeof window !== 'undefined' && window.CHARISMA_CONFIG && window.CHARISMA_CONFIG.paymentMode) || 'demo',
   publicKey: '',                    // Zainpay public key (safe for the browser)
   zainboxCode: '',                  // your Zainbox / sub-account code
   companyEmail: '',
@@ -214,8 +214,8 @@ const ZAINPAY = {
    When `url` and `anonKey` are both set, the gifting flow writes to
    the `wedding_payments` table and admin.html reads from it.
 
-   When they are blank the app falls back to this project's own
-   tables API (`payments` table), so the dashboard is usable today.
+  When they are blank, public payment persistence is disabled outside
+  local preview; verified live payments are stored server-side.
 
    Table SQL (run once in the Supabase SQL editor) is in README.md.  */
 const SUPABASE = {

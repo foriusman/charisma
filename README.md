@@ -187,7 +187,7 @@ The Supabase `wedding_payments` table additionally stores `receipt_path` for ban
 1. Create a Supabase project and open **SQL Editor → New query**.
 2. Run the complete script in [.tables/supabase-receipts.sql](.tables/supabase-receipts.sql). It creates or updates `wedding_payments`, adds the `receipt_path` field, creates the private `payment-receipts` bucket with an 8 MB limit and allowed image/PDF types, and installs the required RLS policies. The script can be run again safely.
 3. In the Supabase project settings, copy the **Project URL** and **anon/public key**. Do not use the `service_role` key in browser code or expose it as a `SUPABASE_*` public variable.
-4. Set `SUPABASE_URL` and `SUPABASE_ANON_KEY` in the hosting environment. For local development, put them in `.env.local` at the project root. `api/config.js` exposes only these two public values to the browser at runtime.
+4. Set `SUPABASE_URL` and `SUPABASE_ANON_KEY` (or `SUPABASE_PUBLISHABLE_KEY`) in the hosting environment. For live Zainpay confirmation, also set the server-only `SUPABASE_SECRET_KEY` (or legacy `SUPABASE_SERVICE_ROLE_KEY`) in Vercel. For local development, put these in `.env.local` at the project root. `api/config.js` exposes only the URL, publishable key, and derived payment mode to the browser; it never exposes the Supabase secret.
 5. Redeploy/restart the local server. The bank-transfer form in the Donation section uploads a private receipt object, then adds a `pending` row to `wedding_payments`. Donors may submit JPG, PNG, WebP, or PDF files up to 8 MB.
 6. Review the pending row in Supabase **Table Editor → wedding_payments**. Use its `receipt_path` to locate the private object in **Storage → payment-receipts**, verify the transfer in your bank account, then mark the row confirmed from the admin dashboard. An uploaded receipt alone is not proof of settlement and never auto-confirms a payment.
 
@@ -281,7 +281,7 @@ With `ZAINPAY.mode` left at its default `demo`, submit a test gift: no charge is
 
 ### Deployment guide
 
-Deploy the project root to Vercel so `api/config.js` and `api/zainpay/*` run as Node serverless functions; keep the HTML pages at the root. Add the required variables from `.env.example` in the Vercel project settings. `SUPABASE_URL` and `SUPABASE_ANON_KEY` are public client settings; Zainpay keys and `PAYMENT_SIGNING_SECRET` are server-only secrets. Static-only hosting is not sufficient unless it proxies these API routes to a compatible Node backend. Verify the deployed site, Supabase bucket upload, and Zainpay sandbox flow before enabling live payments.
+Deploy the project root to Vercel so `api/config.js` and `api/zainpay/*` run as Node serverless functions; keep the HTML pages at the root. Set `ZAINPAY_PUBLIC_KEY`, `ZAINPAY_ZAINBOX_CODE`, `ZAINPAY_ENV` (`sandbox` first, then `live`), `PAYMENT_SIGNING_SECRET` (at least 32 characters), `SITE_URL` (the exact HTTPS site origin), `SUPABASE_URL`, `SUPABASE_ANON_KEY` (or `SUPABASE_PUBLISHABLE_KEY`), and the server-only `SUPABASE_SECRET_KEY` (or legacy `SUPABASE_SERVICE_ROLE_KEY`) in Vercel. Live payment mode is enabled by `/api/config` only when both Zainpay and Supabase server settings are present. The Supabase secret is used only after Zainpay verification to upsert the confirmed payment; it is never delivered to the browser. Static-only hosting is not sufficient unless it proxies these API routes to a compatible Node backend. Verify the deployed site, Supabase bucket upload, and Zainpay sandbox flow before enabling live payments.
 
 ---
 
@@ -305,12 +305,14 @@ and `api/zainpay/confirm.js`, compatible with Vercel's Node functions. Static-on
 hosting must proxy these same-origin routes to a Node function deployment. Do not
 publish `.env` or `server/` as static assets. No npm runtime dependencies are needed.
 
-1. Set the hosting environment variables in `.env.example`: `ZAINPAY_PUBLIC_KEY`,
-   `ZAINPAY_ZAINBOX_CODE`, `ZAINPAY_ENV=sandbox`, `SITE_URL` (your HTTPS origin), and
-   `PAYMENT_SIGNING_SECRET` (a random secret of at least 32 characters).
-2. Deploy the API routes alongside the frontend. Set `ZAINPAY.mode` in
-   `js/config.js` to `live` to enable hosted checkout (the backend environment
-   still controls sandbox versus real payments). Keep it `demo` until configured.
+1. Set the Vercel environment variables: `ZAINPAY_PUBLIC_KEY`,
+   `ZAINPAY_ZAINBOX_CODE`, `ZAINPAY_ENV=sandbox`, `SITE_URL` (your HTTPS origin),
+   `PAYMENT_SIGNING_SECRET` (a random secret of at least 32 characters),
+   `SUPABASE_URL`, a browser-safe `SUPABASE_ANON_KEY` or `SUPABASE_PUBLISHABLE_KEY`,
+   and the server-only `SUPABASE_SECRET_KEY` (or legacy `SUPABASE_SERVICE_ROLE_KEY`).
+2. Deploy the API routes alongside the frontend. `/api/config` derives `sandbox` or
+   `live` mode from these server environment variables; no payment mode or secret
+   needs to be edited into `js/config.js`. Keep `ZAINPAY_ENV=sandbox` until testing is complete.
 3. Complete a sandbox checkout, return, cancelled checkout, and failed checkout.
    Check the verification amount matches the original amount in naira. Zainpay's
    deposit verification documentation also describes net settlement amounts;

@@ -31,7 +31,7 @@ async function gateway(service, options, env) {
   const base = env.ZAINPAY_ENV === 'sandbox' ? 'https://sandbox.zainpay.ng' : 'https://api.zainpay.ng';
   const path = service === 'INITIALIZE_PAYMENT'
     ? '/zainbox/card/initialize/payment'
-    : '/virtual-account/wallet/deposit/verify/' + encodeURIComponent(options.params);
+    : '/virtual-account/wallet/deposit/verify/v2/' + encodeURIComponent(options.params);
   const response = await fetch(base + path, {
     method: options.data ? 'POST' : 'GET',
     headers: { Authorization: 'Bearer ' + env.ZAINPAY_PUBLIC_KEY, 'Content-Type': 'application/json' },
@@ -41,29 +41,50 @@ async function gateway(service, options, env) {
   if (!response.ok) throw new Error('Gateway request failed');
   return response.json();
 }
+async function persistReceipt(receipt, env) {
+  const secret = env.SUPABASE_SECRET_KEY || env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!env.SUPABASE_URL || !secret) throw new Error('Payment storage is not configured');
+  const base = new URL(env.SUPABASE_URL);
+  if (base.protocol !== 'https:') throw new Error('Supabase URL must use HTTPS');
+  const table = encodeURIComponent(env.SUPABASE_PAYMENTS_TABLE || 'wedding_payments');
+  const response = await fetch(base.origin + '/rest/v1/' + table + '?on_conflict=reference', {
+    method: 'POST',
+    headers: {
+      apikey: secret,
+      'Content-Type': 'application/json',
+      Prefer: 'resolution=merge-duplicates,return=minimal'
+    },
+    body: JSON.stringify(receipt),
+    signal: AbortSignal.timeout(15000)
+  });
+  if (!response.ok) throw new Error('Payment storage failed');
+}
 async function charge(input, env = process.env, call = gateway) {
   const config = settings(env);
   const amount = Number(input.amount);
   if (!Number.isFinite(amount) || amount < 100 || amount > 10000000 || Math.round(amount * 100) !== amount * 100 || input.currency !== 'NGN') throw new Error('Invalid amount');
-  if (typeof input.name !== 'string' || !input.name.trim() || input.name.length > 80 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email) || String(input.email).length > 254 || !/^\+?[0-9 ()-]{10,20}$/.test(input.phone)) throw new Error('Invalid payer details');
+  if (typeof input.name !== 'string' || !input.name.trim() || input.name.length > 80 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email) || String(input.email).length > 254 || typeof input.phone !== 'string' || !/^\+?[0-9 ()-]{10,20}$/.test(input.phone)) throw new Error('Invalid payer details');
   const reference = 'CH26-' + randomUUID();
   const order = { reference, amount, currency: 'NGN', payer_name: input.name.trim(), payer_email: input.email, purpose: String(input.purpose || 'Wedding Gift').slice(0, 100), note: String(input.note || '').slice(0, 300), created_at: new Date().toISOString(), expires: Date.now() + 7 * 86400000, box: config.box, sandbox: config.sandbox };
-  const result = await call('INITIALIZE_PAYMENT', { data: { amount: amount.toFixed(2), txnRef: reference, mobileNumber: input.phone.replace(/[ ()-]/g, ''), zainboxCode: config.box, emailAddress: input.email, callBackUrl: config.site + '/?payment=return' } }, env);
+  const result = await call('INITIALIZE_PAYMENT', { data: { amount: amount.toFixed(2), txnRef: reference, mobileNumber: input.phone.replace(/[ ()-]/g, ''), zainboxCode: config.box, emailAddress: input.email, currencyCode: 'NGN', paymentChannels: ['card', 'bank_transfer'], callBackUrl: config.site + '/?payment=return' } }, env);
   if (result?.code !== '00' || typeof result.data !== 'string') throw new Error('Checkout unavailable');
   const url = new URL(result.data);
   if (url.protocol !== 'https:' || !/(^|\.)zainpay\.ng$/.test(url.hostname)) throw new Error('Invalid checkout URL');
   return { checkoutUrl: url.href, token: pack(order, config.secret) };
 }
-async function confirm(input, env = process.env, call = gateway) {
+async function confirm(input, env = process.env, call = gateway, save = persistReceipt) {
   const config = settings(env);
   const order = unpack(input.token, config.secret);
   if (order.box !== config.box || order.sandbox !== config.sandbox) throw new Error('Session environment mismatch');
   const result = await call('GET_CARD_PAYMENT_STATUS', { params: order.reference }, env);
   const data = result?.data;
-  const amount = Number(data?.amount?.amount ?? data?.amount);
-  if (result?.code !== '00' || !data || data.txnRef !== order.reference || data.zainboxCode !== config.box || data.txnType !== 'deposit' || !data.paymentRef || !data.paymentDate || amount !== order.amount) throw new Error('Payment not verified');
+  const amountKobo = Number(data?.depositedAmount ?? data?.amount?.amount ?? data?.amount);
+  const paymentDate = data?.paymentDate || data?.txnDate;
+  if (result?.code !== '00' || !data || data.txnRef !== order.reference || data.zainboxCode !== config.box || data.txnType !== 'deposit' || !data.paymentRef || !paymentDate || amountKobo !== order.amount * 100) throw new Error('Payment not verified');
   const { expires, box, sandbox, ...receipt } = order;
-  return { receipt: { ...receipt, status: 'confirmed', gateway: sandbox ? 'Zainpay Sandbox' : 'Zainpay', gateway_reference: data.paymentRef, paid_at: data.paymentDate } };
+  const verifiedReceipt = { ...receipt, status: 'confirmed', gateway: sandbox ? 'Zainpay Sandbox' : 'Zainpay', gateway_reference: data.paymentRef, paid_at: paymentDate };
+  await save(verifiedReceipt, env);
+  return { receipt: verifiedReceipt };
 }
 function handler(action) {
   return async (req, res) => {
