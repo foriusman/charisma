@@ -65,11 +65,17 @@ async function gateway(service, options, env) {
       .replace(/[\x00-\x1f\x7f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 180);
     const contentType = String(response.headers && response.headers.get('content-type') || 'unknown')
       .split(';')[0].replace(/[^a-zA-Z0-9/+.-]/g, '').slice(0, 50);
+    let rawBody = '';
+    try { rawBody = JSON.stringify(details); } catch (_) { rawBody = ''; }
+    rawBody = rawBody === '{}' ? '' : rawBody.replace(/[\x00-\x1f\x7f]/g, ' ').slice(0, 180);
+    console.error('Zainpay ' + service + ' HTTP ' + response.status + ': ' + rawBody);
     const reason = gatewayDescription
       ? ': ' + gatewayDescription
-      : gatewayCode === 'unknown'
-        ? ' (response type ' + contentType + '; no provider error details returned)'
-        : '';
+      : rawBody
+        ? ': ' + rawBody
+        : gatewayCode === 'unknown'
+          ? ' (response type ' + contentType + '; no provider error details returned)'
+          : '';
     throw paymentError('ZAINPAY_HTTP_ERROR', 502, 'Zainpay returned HTTP ' + response.status + ' (code ' + gatewayCode + ')' + reason + '. Check the live API key, Zainbox code, and request configuration.');
   }
   return response.json();
