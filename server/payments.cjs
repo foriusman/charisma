@@ -56,10 +56,20 @@ async function gateway(service, options, env) {
   if (!response.ok) {
     let details = {};
     try { details = await response.json(); } catch (_) { details = {}; }
-    const gatewayCode = String(details.code || 'unknown').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 20);
-    const gatewayDescription = String(details.description || details.message || '')
+    const nested = details && typeof details === 'object'
+      ? [details.error, details.data, details.details].find(function (value) { return value && typeof value === 'object'; }) || {}
+      : {};
+    const gatewayCode = String(details.code || nested.code || details.errorCode || 'unknown')
+      .replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 20);
+    const gatewayDescription = String(details.description || details.message || nested.description || nested.message || '')
       .replace(/[\x00-\x1f\x7f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 180);
-    const reason = gatewayDescription ? ': ' + gatewayDescription : '';
+    const contentType = String(response.headers && response.headers.get('content-type') || 'unknown')
+      .split(';')[0].replace(/[^a-zA-Z0-9/+.-]/g, '').slice(0, 50);
+    const reason = gatewayDescription
+      ? ': ' + gatewayDescription
+      : gatewayCode === 'unknown'
+        ? ' (response type ' + contentType + '; no provider error details returned)'
+        : '';
     throw paymentError('ZAINPAY_HTTP_ERROR', 502, 'Zainpay returned HTTP ' + response.status + ' (code ' + gatewayCode + ')' + reason + '. Check the live API key, Zainbox code, and request configuration.');
   }
   return response.json();

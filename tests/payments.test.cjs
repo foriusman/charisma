@@ -26,16 +26,37 @@ test('missing keys, rejected checkout and foreign redirects fail closed', async 
 });
 test('gateway diagnostics include safe provider details but never credentials', async () => {
   const originalFetch = global.fetch;
+  let gatewayResponse = {
+    ok: false,
+    status: 400,
+    headers: { get: () => 'application/json; charset=utf-8' },
+    json: async () => ({ error: { code: '02', message: 'Invalid Zainbox configuration' } })
+  };
   global.fetch = async (url, options) => {
     assert.match(url, /api\.zainpay\.ng/);
     assert.equal(options.headers.Authorization, 'Bearer ' + env.ZAINPAY_PUBLIC_KEY);
-    return { ok: false, status: 400, json: async () => ({ code: '02', description: 'Invalid Zainbox configuration' }) };
+    return gatewayResponse;
   };
   try {
     await assert.rejects(
       gateway('INITIALIZE_PAYMENT', { data: {} }, { ...env, ZAINPAY_ENV: 'live' }),
       (error) => {
         assert.match(error.publicMessage, /HTTP 400 \(code 02\): Invalid Zainbox configuration/);
+        assert.equal(error.publicMessage.includes(env.ZAINPAY_PUBLIC_KEY), false);
+        return true;
+      }
+    );
+
+    gatewayResponse = {
+      ok: false,
+      status: 400,
+      headers: { get: () => 'text/html; charset=utf-8' },
+      json: async () => { throw new Error('not JSON'); }
+    };
+    await assert.rejects(
+      gateway('INITIALIZE_PAYMENT', { data: {} }, { ...env, ZAINPAY_ENV: 'live' }),
+      (error) => {
+        assert.match(error.publicMessage, /response type text\/html; no provider error details returned/);
         assert.equal(error.publicMessage.includes(env.ZAINPAY_PUBLIC_KEY), false);
         return true;
       }
