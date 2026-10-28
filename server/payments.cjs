@@ -54,7 +54,13 @@ async function gateway(service, options, env) {
     throw paymentError('ZAINPAY_UNAVAILABLE', 502, 'Could not reach Zainpay. Check the Vercel function logs and Zainpay service status.');
   }
   if (!response.ok) {
-    throw paymentError('ZAINPAY_HTTP_ERROR', 502, 'Zainpay returned HTTP ' + response.status + '. Verify the live API key, Zainbox code, and environment in Vercel.');
+    let details = {};
+    try { details = await response.json(); } catch (_) { details = {}; }
+    const gatewayCode = String(details.code || 'unknown').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 20);
+    const gatewayDescription = String(details.description || details.message || '')
+      .replace(/[\x00-\x1f\x7f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 180);
+    const reason = gatewayDescription ? ': ' + gatewayDescription : '';
+    throw paymentError('ZAINPAY_HTTP_ERROR', 502, 'Zainpay returned HTTP ' + response.status + ' (code ' + gatewayCode + ')' + reason + '. Check the live API key, Zainbox code, and request configuration.');
   }
   return response.json();
 }
@@ -122,4 +128,4 @@ function handler(action) {
     }
   };
 }
-module.exports = { charge, confirm, handler, pack, unpack };
+module.exports = { charge, confirm, gateway, handler, pack, unpack };

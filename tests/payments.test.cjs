@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { charge, confirm, unpack } = require('../server/payments.cjs');
+const { charge, confirm, gateway, unpack } = require('../server/payments.cjs');
 const env = { ZAINPAY_PUBLIC_KEY: 'test', ZAINPAY_ZAINBOX_CODE: 'box', PAYMENT_SIGNING_SECRET: 'x'.repeat(32), SITE_URL: 'https://wedding.example', ZAINPAY_ENV: 'sandbox' };
 const input = { name: 'Guest', email: 'guest@example.com', phone: '08012345678', amount: 5000, currency: 'NGN' };
 async function started() { return charge(input, env, async () => ({ code: '00', data: 'https://dev.zainpay.ng/checkout' })); }
@@ -22,6 +22,26 @@ test('missing keys, rejected checkout and foreign redirects fail closed', async 
   await assert.rejects(charge(input, {}, () => assert.fail('gateway called')));
   for (const result of [{ code: '04' }, { code: '00', data: 'https://zainpay.ng.attacker.example' }, { code: '00', data: 'http://zainpay.ng' }]) {
     await assert.rejects(charge(input, env, async () => result));
+  }
+});
+test('gateway diagnostics include safe provider details but never credentials', async () => {
+  const originalFetch = global.fetch;
+  global.fetch = async (url, options) => {
+    assert.match(url, /api\.zainpay\.ng/);
+    assert.equal(options.headers.Authorization, 'Bearer ' + env.ZAINPAY_PUBLIC_KEY);
+    return { ok: false, status: 400, json: async () => ({ code: '02', description: 'Invalid Zainbox configuration' }) };
+  };
+  try {
+    await assert.rejects(
+      gateway('INITIALIZE_PAYMENT', { data: {} }, { ...env, ZAINPAY_ENV: 'live' }),
+      (error) => {
+        assert.match(error.publicMessage, /HTTP 400 \(code 02\): Invalid Zainbox configuration/);
+        assert.equal(error.publicMessage.includes(env.ZAINPAY_PUBLIC_KEY), false);
+        return true;
+      }
+    );
+  } finally {
+    global.fetch = originalFetch;
   }
 });
 test('tampered tokens never reach verification', async () => {
