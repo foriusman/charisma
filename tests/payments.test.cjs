@@ -4,9 +4,9 @@ const { charge, confirm, gateway, unpack } = require('../server/payments.cjs');
 const env = { ZAINPAY_PUBLIC_KEY: 'test', ZAINPAY_ZAINBOX_CODE: 'box', PAYMENT_SIGNING_SECRET: 'x'.repeat(32), SITE_URL: 'https://wedding.example', ZAINPAY_ENV: 'sandbox' };
 const input = { name: 'Guest', email: 'guest@example.com', phone: '08012345678', amount: 5000, currency: 'NGN' };
 async function started() { return charge(input, env, async () => ({ code: '00', data: 'https://dev.zainpay.ng/checkout' })); }
-test('checkout sends naira and a server-generated reference', async () => {
+test('checkout sends kobo and a server-generated reference', async () => {
   const result = await charge(input, env, async (service, { data }) => {
-    assert.equal(service, 'INITIALIZE_PAYMENT'); assert.equal(data.amount, '5000.00');
+    assert.equal(service, 'INITIALIZE_PAYMENT'); assert.equal(data.amount, '500000');
     assert.deepEqual(data.paymentChannels, ['card', 'bank_transfer']); assert.equal(data.currencyCode, 'NGN');
     assert.match(data.txnRef, /^CH26-/); assert.equal(data.callBackUrl, 'https://wedding.example/?payment=return');
     return { code: '00', data: 'https://dev.zainpay.ng/checkout' };
