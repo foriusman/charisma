@@ -185,7 +185,11 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     }).then(function (r) {
-      if (!r.ok) throw new Error('Charge endpoint ' + r.status);
+      if (!r.ok) {
+        return r.json().catch(function () { return {}; }).then(function (error) {
+          throw new Error(error.message || 'Charge endpoint returned HTTP ' + r.status + '.');
+        });
+      }
       return r.json();
     }).then(function (data) {
       if (!data || typeof data.checkoutUrl !== 'string' || !data.checkoutUrl.trim()) {
@@ -458,8 +462,8 @@
           form.reset();
           chips.forEach(function (c) { c.classList.remove('is-active'); });
         })
-        .catch(function () {
-          setStatus('We could not record that just now. Please try again.', 'is-err');
+        .catch(function (error) {
+          setStatus(error && error.message ? error.message : 'We could not record that just now. Please try again.', 'is-err');
         })
         .then(function () { if (submit) submit.disabled = false; });
     });

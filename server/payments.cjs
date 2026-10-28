@@ -1,13 +1,23 @@
 'use strict';
 const { createHmac, timingSafeEqual, randomUUID } = require('node:crypto');
 
+function paymentError(code, status, message) {
+  const error = new Error(message);
+  error.code = code;
+  error.status = status;
+  error.publicMessage = message;
+  return error;
+}
+
 function settings(env) {
   if (!env.ZAINPAY_PUBLIC_KEY || !env.ZAINPAY_ZAINBOX_CODE || !env.PAYMENT_SIGNING_SECRET || env.PAYMENT_SIGNING_SECRET.length < 32) {
-    throw new Error('Payment service is not configured');
+    throw paymentError('PAYMENT_CONFIG', 503, 'Payment service configuration is incomplete. Check the required Vercel Production variables.');
   }
-  if (!['sandbox', 'live'].includes(env.ZAINPAY_ENV)) throw new Error('Invalid payment environment');
-  const site = new URL(env.SITE_URL);
-  if (site.protocol !== 'https:') throw new Error('SITE_URL must use HTTPS');
+  if (!['sandbox', 'live'].includes(env.ZAINPAY_ENV)) throw paymentError('PAYMENT_CONFIG', 503, 'ZAINPAY_ENV must be sandbox or live.');
+  let site;
+  try { site = new URL(env.SITE_URL); }
+  catch (_) { throw paymentError('PAYMENT_CONFIG', 503, 'SITE_URL must be a valid HTTPS URL.'); }
+  if (site.protocol !== 'https:') throw paymentError('PAYMENT_CONFIG', 503, 'SITE_URL must use HTTPS.');
   return { site: site.origin, box: env.ZAINPAY_ZAINBOX_CODE, secret: env.PAYMENT_SIGNING_SECRET, sandbox: env.ZAINPAY_ENV === 'sandbox' };
 }
 function sign(value, secret) {
@@ -32,13 +42,20 @@ async function gateway(service, options, env) {
   const path = service === 'INITIALIZE_PAYMENT'
     ? '/zainbox/card/initialize/payment'
     : '/virtual-account/wallet/deposit/verify/v2/' + encodeURIComponent(options.params);
-  const response = await fetch(base + path, {
-    method: options.data ? 'POST' : 'GET',
-    headers: { Authorization: 'Bearer ' + env.ZAINPAY_PUBLIC_KEY, 'Content-Type': 'application/json' },
-    body: options.data ? JSON.stringify(options.data) : undefined,
-    signal: AbortSignal.timeout(20000)
-  });
-  if (!response.ok) throw new Error('Gateway request failed');
+  let response;
+  try {
+    response = await fetch(base + path, {
+      method: options.data ? 'POST' : 'GET',
+      headers: { Authorization: 'Bearer ' + env.ZAINPAY_PUBLIC_KEY, 'Content-Type': 'application/json' },
+      body: options.data ? JSON.stringify(options.data) : undefined,
+      signal: AbortSignal.timeout(20000)
+    });
+  } catch (_) {
+    throw paymentError('ZAINPAY_UNAVAILABLE', 502, 'Could not reach Zainpay. Check the Vercel function logs and Zainpay service status.');
+  }
+  if (!response.ok) {
+    throw paymentError('ZAINPAY_HTTP_ERROR', 502, 'Zainpay returned HTTP ' + response.status + '. Verify the live API key, Zainbox code, and environment in Vercel.');
+  }
   return response.json();
 }
 async function persistReceipt(receipt, env) {
@@ -62,14 +79,14 @@ async function persistReceipt(receipt, env) {
 async function charge(input, env = process.env, call = gateway) {
   const config = settings(env);
   const amount = Number(input.amount);
-  if (!Number.isFinite(amount) || amount < 100 || amount > 10000000 || Math.round(amount * 100) !== amount * 100 || input.currency !== 'NGN') throw new Error('Invalid amount');
-  if (typeof input.name !== 'string' || !input.name.trim() || input.name.length > 80 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email) || String(input.email).length > 254 || typeof input.phone !== 'string' || !/^\+?[0-9 ()-]{10,20}$/.test(input.phone)) throw new Error('Invalid payer details');
+  if (!Number.isFinite(amount) || amount < 100 || amount > 10000000 || Math.round(amount * 100) !== amount * 100 || input.currency !== 'NGN') throw paymentError('INVALID_PAYMENT', 400, 'Enter an amount from ₦100 to ₦10,000,000 in NGN.');
+  if (typeof input.name !== 'string' || !input.name.trim() || input.name.length > 80 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email) || String(input.email).length > 254 || typeof input.phone !== 'string' || !/^\+?[0-9 ()-]{10,20}$/.test(input.phone)) throw paymentError('INVALID_PAYER', 400, 'Check your name, email, and phone number, then try again.');
   const reference = 'CH26-' + randomUUID();
   const order = { reference, amount, currency: 'NGN', payer_name: input.name.trim(), payer_email: input.email, purpose: String(input.purpose || 'Wedding Gift').slice(0, 100), note: String(input.note || '').slice(0, 300), created_at: new Date().toISOString(), expires: Date.now() + 7 * 86400000, box: config.box, sandbox: config.sandbox };
   const result = await call('INITIALIZE_PAYMENT', { data: { amount: amount.toFixed(2), txnRef: reference, mobileNumber: input.phone.replace(/[ ()-]/g, ''), zainboxCode: config.box, emailAddress: input.email, currencyCode: 'NGN', paymentChannels: ['card', 'bank_transfer'], callBackUrl: config.site + '/?payment=return' } }, env);
-  if (result?.code !== '00' || typeof result.data !== 'string') throw new Error('Checkout unavailable');
+  if (result?.code !== '00' || typeof result.data !== 'string') throw paymentError('ZAINPAY_REJECTED', 502, 'Zainpay did not create checkout (code ' + String(result?.code || 'unknown').slice(0, 12) + '). Verify the live API key and Zainbox configuration.');
   const url = new URL(result.data);
-  if (url.protocol !== 'https:' || !/(^|\.)zainpay\.ng$/.test(url.hostname)) throw new Error('Invalid checkout URL');
+  if (url.protocol !== 'https:' || !/(^|\.)zainpay\.ng$/.test(url.hostname)) throw paymentError('ZAINPAY_REJECTED', 502, 'Zainpay returned an invalid checkout URL. Contact support before retrying.');
   return { checkoutUrl: url.href, token: pack(order, config.secret) };
 }
 async function confirm(input, env = process.env, call = gateway, save = persistReceipt) {
@@ -97,7 +114,12 @@ function handler(action) {
       const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
       if (!body || JSON.stringify(body).length > 10000) return res.status(400).json({ error: 'Invalid request' });
       return res.status(200).json(await action(body));
-    } catch (_) { return res.status(400).json({ error: 'Unable to complete payment request. Please retry or contact us with your reference.' }); }
+    } catch (error) {
+      const status = Number(error && error.status) || 500;
+      const code = error && error.code || 'PAYMENT_ERROR';
+      const message = error && error.publicMessage || 'Unable to complete the payment request. Please retry or contact support.';
+      return res.status(status).json({ error: code, message: message });
+    }
   };
 }
 module.exports = { charge, confirm, handler, pack, unpack };
