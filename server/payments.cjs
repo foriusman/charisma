@@ -105,7 +105,7 @@ async function charge(input, env = process.env, call = gateway) {
   if (typeof input.name !== 'string' || !input.name.trim() || input.name.length > 80 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email) || String(input.email).length > 254 || typeof input.phone !== 'string' || !/^\+?[0-9 ()-]{10,20}$/.test(input.phone)) throw paymentError('INVALID_PAYER', 400, 'Check your name, email, and phone number, then try again.');
   const reference = 'CH26-' + randomUUID();
   const order = { reference, amount, currency: 'NGN', payer_name: input.name.trim(), payer_email: input.email, purpose: String(input.purpose || 'Wedding Gift').slice(0, 100), note: String(input.note || '').slice(0, 300), created_at: new Date().toISOString(), expires: Date.now() + 7 * 86400000, box: config.box, sandbox: config.sandbox };
-  const result = await call('INITIALIZE_PAYMENT', { data: { amount: String(Math.round(amount * 100)), txnRef: reference, mobileNumber: input.phone.replace(/[ ()-]/g, ''), zainboxCode: config.box, emailAddress: input.email, currencyCode: 'NGN', paymentChannels: ['card', 'bank_transfer'], callBackUrl: config.site + '/?payment=return' } }, env);
+  const result = await call('INITIALIZE_PAYMENT', { data: { amount: String(amount), txnRef: reference, mobileNumber: input.phone.replace(/[ ()-]/g, ''), zainboxCode: config.box, emailAddress: input.email, currencyCode: 'NGN', paymentChannels: ['card', 'bank_transfer'], callBackUrl: config.site + '/?payment=return' } }, env);
   if (result?.code !== '00' || typeof result.data !== 'string') throw paymentError('ZAINPAY_REJECTED', 502, 'Zainpay did not create checkout (code ' + String(result?.code || 'unknown').slice(0, 12) + '). Verify the live API key and Zainbox configuration.');
   const url = new URL(result.data);
   if (url.protocol !== 'https:' || !/(^|\.)zainpay\.ng$/.test(url.hostname)) throw paymentError('ZAINPAY_REJECTED', 502, 'Zainpay returned an invalid checkout URL. Contact support before retrying.');
@@ -117,9 +117,9 @@ async function confirm(input, env = process.env, call = gateway, save = persistR
   if (order.box !== config.box || order.sandbox !== config.sandbox) throw new Error('Session environment mismatch');
   const result = await call('GET_CARD_PAYMENT_STATUS', { params: order.reference }, env);
   const data = result?.data;
-  const amountKobo = Number(data?.depositedAmount ?? data?.amount?.amount ?? data?.amount);
+  const amountNaira = Number(data?.depositedAmount ?? data?.amount?.amount ?? data?.amount);
   const paymentDate = data?.paymentDate || data?.txnDate;
-  if (result?.code !== '00' || !data || data.txnRef !== order.reference || data.zainboxCode !== config.box || data.txnType !== 'deposit' || !data.paymentRef || !paymentDate || amountKobo !== order.amount * 100) throw new Error('Payment not verified');
+  if (result?.code !== '00' || !data || data.txnRef !== order.reference || data.zainboxCode !== config.box || data.txnType !== 'deposit' || !data.paymentRef || !paymentDate || amountNaira !== order.amount) throw new Error('Payment not verified');
   const { expires, box, sandbox, ...receipt } = order;
   const verifiedReceipt = { ...receipt, status: 'confirmed', gateway: sandbox ? 'Zainpay Sandbox' : 'Zainpay', gateway_reference: data.paymentRef, paid_at: paymentDate };
   await save(verifiedReceipt, env);
